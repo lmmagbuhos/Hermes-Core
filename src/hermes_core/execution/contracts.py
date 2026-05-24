@@ -18,3 +18,9 @@ class InteractiveSession(BaseModel):
     transcript_ref: str
     last_prompt: str | None = None
 
+
+class PtyProcess(BaseModel):
+    pid: int
+    fd: int
+    command: list[str]
+    cwd: str

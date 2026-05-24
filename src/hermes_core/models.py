@@ -58,3 +58,40 @@ class MemoryRecord(Base):
         default=utc_now,
         onupdate=utc_now,
     )
+
+
+class InteractiveSessionRecord(Base):
+    __tablename__ = "interactive_sessions"
+
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    run_id: Mapped[int] = mapped_column(nullable=False)
+    command: Mapped[list[str]] = mapped_column(JSON, default=list)
+    cwd: Mapped[str] = mapped_column(String(1000), nullable=False)
+    status: Mapped[str] = mapped_column(String(80), nullable=False)
+    transcript_ref: Mapped[str] = mapped_column(String(1000), nullable=False)
+    process_id: Mapped[int | None] = mapped_column(nullable=True)
+    last_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prompt_history: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list)
+    stdin_history: Mapped[list[dict[str, str]]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+
+class ProjectContextCandidate(Base):
+    __tablename__ = "project_context_candidates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    run_id: Mapped[int] = mapped_column(nullable=False)
+    project_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    blueprint: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(80), nullable=False, default="candidate")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=utc_now,
+        onupdate=utc_now,
+    )
