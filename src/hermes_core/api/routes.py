@@ -21,6 +21,7 @@ class StartLarvFullRequest(BaseModel):
     project_name: str
     command: list[str]
     cwd: str
+    start_process: bool = False
 
 
 class WaitingForInputRequest(BaseModel):
@@ -70,11 +71,20 @@ def create_run(request: CreateRunRequest) -> dict[str, Any]:
     }
 
 
+_WORKFLOW_SERVICE: NewProjectWorkflowService | None = None
+_WORKFLOW_DATABASE_URL: str | None = None
+
+
 def _workflow_service() -> NewProjectWorkflowService:
+    global _WORKFLOW_DATABASE_URL, _WORKFLOW_SERVICE
     settings = get_settings()
+    if _WORKFLOW_SERVICE is not None and _WORKFLOW_DATABASE_URL == settings.database_url:
+        return _WORKFLOW_SERVICE
     engine, session_factory = create_session_factory(settings.database_url)
     init_db(engine)
-    return NewProjectWorkflowService(session_factory)
+    _WORKFLOW_DATABASE_URL = settings.database_url
+    _WORKFLOW_SERVICE = NewProjectWorkflowService(session_factory)
+    return _WORKFLOW_SERVICE
 
 
 def _workflow_result_payload(result: NewProjectWorkflowResult) -> dict[str, Any]:
@@ -104,6 +114,7 @@ def start_larv_full(request: StartLarvFullRequest) -> dict[str, Any]:
         project_name=request.project_name,
         command=request.command,
         cwd=request.cwd,
+        start_process=request.start_process,
     )
     return _workflow_result_payload(result)
 
@@ -131,3 +142,15 @@ def submit_stdin(session_id: str, request: SubmitInputRequest) -> dict[str, Any]
         answer=request.answer,
     )
     return _workflow_result_payload(result)
+
+
+@router.get("/interactive-sessions/{session_id}/output")
+def read_interactive_output(session_id: str, timeout: float = 0.2) -> dict[str, Any]:
+    service = _workflow_service()
+    result = service.read_interactive_output(session_id, timeout=timeout)
+    return {
+        "session_id": result.session_id,
+        "output": result.output,
+        "status": result.status,
+        "prompt_id": result.prompt_id,
+    }

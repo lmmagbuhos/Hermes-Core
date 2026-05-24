@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from pathlib import Path
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
@@ -90,6 +91,48 @@ class InteractiveSessionService:
                     "answer": answer,
                 },
             ]
+            db.add(record)
+            db.commit()
+            db.refresh(record)
+            return record
+
+    def set_process_id(self, session_id: str, *, process_id: int) -> InteractiveSessionRecord:
+        with self.session_factory() as db:
+            record = db.get(InteractiveSessionRecord, session_id)
+            if record is None:
+                raise ValueError(f"Interactive session not found: {session_id}")
+            record.process_id = process_id
+            db.add(record)
+            db.commit()
+            db.refresh(record)
+            return record
+
+    def append_transcript(self, session_id: str, chunk: str) -> InteractiveSessionRecord:
+        with self.session_factory() as db:
+            record = db.get(InteractiveSessionRecord, session_id)
+            if record is None:
+                raise ValueError(f"Interactive session not found: {session_id}")
+            transcript_path = Path(record.transcript_ref)
+            transcript_path.parent.mkdir(parents=True, exist_ok=True)
+            with transcript_path.open("a", encoding="utf-8") as handle:
+                handle.write(chunk)
+            db.add(record)
+            db.commit()
+            db.refresh(record)
+            return record
+
+    def mark_completed(self, session_id: str) -> InteractiveSessionRecord:
+        return self._set_status(session_id, "completed")
+
+    def mark_recovery_required(self, session_id: str) -> InteractiveSessionRecord:
+        return self._set_status(session_id, "recovery_required")
+
+    def _set_status(self, session_id: str, status: str) -> InteractiveSessionRecord:
+        with self.session_factory() as db:
+            record = db.get(InteractiveSessionRecord, session_id)
+            if record is None:
+                raise ValueError(f"Interactive session not found: {session_id}")
+            record.status = status
             db.add(record)
             db.commit()
             db.refresh(record)

@@ -55,3 +55,12 @@ def session_input(session_id: str, prompt_id: str, answer: str) -> None:
     service = _new_project_service()
     result = service.submit_human_input(session_id, prompt_id=prompt_id, answer=answer)
     typer.echo(f"run_id={result.run.id} state={result.run.state}")
+
+
+@app.command("session-output")
+def session_output(session_id: str, timeout: float = 0.2) -> None:
+    service = _new_project_service()
+    result = service.read_interactive_output(session_id, timeout=timeout)
+    typer.echo(f"session_id={result.session_id} status={result.status} prompt_id={result.prompt_id}")
+    if result.output:
+        typer.echo(result.output)

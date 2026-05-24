@@ -7,6 +7,7 @@ from hermes_core.artifacts.ingest import ingest_project_artifacts
 from hermes_core.events.service import EventService
 from hermes_core.models import InteractiveSessionRecord, Run
 from hermes_core.projects.service import ProjectContextCandidateService
+from hermes_core.runtime.interactive import InteractiveRuntime, RuntimeReadResult
 from hermes_core.runs.service import RunService
 from hermes_core.sessions.service import InteractiveSessionService
 
@@ -24,6 +25,7 @@ class NewProjectWorkflowService:
         self.sessions = InteractiveSessionService(session_factory)
         self.events = EventService(session_factory)
         self.candidates = ProjectContextCandidateService(session_factory)
+        self.runtime = InteractiveRuntime(session_factory)
 
     def start_larv_full(
         self,
@@ -31,6 +33,7 @@ class NewProjectWorkflowService:
         project_name: str,
         command: list[str],
         cwd: str,
+        start_process: bool = False,
     ) -> NewProjectWorkflowResult:
         run = self.runs.create_run(
             "new_project_creation",
@@ -40,12 +43,20 @@ class NewProjectWorkflowService:
             },
         )
         transcript_ref = str(Path(cwd) / ".hermes" / "transcripts" / f"run_{run.id}.log")
-        interactive_session = self.sessions.create(
-            run_id=run.id,
-            command=command,
-            cwd=cwd,
-            transcript_ref=transcript_ref,
-        )
+        if start_process:
+            interactive_session = self.runtime.start(
+                run_id=run.id,
+                command=command,
+                cwd=cwd,
+                transcript_ref=transcript_ref,
+            )
+        else:
+            interactive_session = self.sessions.create(
+                run_id=run.id,
+                command=command,
+                cwd=cwd,
+                transcript_ref=transcript_ref,
+            )
         run = self.runs.transition(
             run.id,
             "larv_full_session_started",
@@ -89,11 +100,14 @@ class NewProjectWorkflowService:
         prompt_id: str,
         answer: str,
     ) -> NewProjectWorkflowResult:
-        interactive_session = self.sessions.record_stdin(
-            session_id,
-            prompt_id=prompt_id,
-            answer=answer,
-        )
+        if session_id in self.runtime._processes:
+            interactive_session = self.runtime.write_input(session_id, answer, prompt_id=prompt_id)
+        else:
+            interactive_session = self.sessions.record_stdin(
+                session_id,
+                prompt_id=prompt_id,
+                answer=answer,
+            )
         run = self.runs.transition(
             interactive_session.run_id,
             "larv_full_input_received",
@@ -105,6 +119,14 @@ class NewProjectWorkflowService:
             run_id=run.id,
         )
         return NewProjectWorkflowResult(run=run, interactive_session=interactive_session)
+
+    def read_interactive_output(
+        self,
+        session_id: str,
+        *,
+        timeout: float = 0.2,
+    ) -> RuntimeReadResult:
+        return self.runtime.read(session_id, timeout=timeout)
 
     def complete_larv_full(
         self,

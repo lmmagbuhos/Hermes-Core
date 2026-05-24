@@ -80,3 +80,34 @@ def test_completes_larv_full_and_creates_project_context_candidate(tmp_path):
         candidate = db.query(ProjectContextCandidate).one()
     assert candidate.project_name == "AeroTrack"
     assert candidate.blueprint["package_manager"] == "pnpm"
+
+
+def test_workflow_can_start_live_interactive_process_and_submit_input(tmp_path):
+    script = tmp_path / "ask.py"
+    script.write_text(
+        "answer = input('Project name? ')\nprint(f'created:{answer}')\n",
+        encoding="utf-8",
+    )
+    db_url = f"sqlite:///{tmp_path / 'hermes.db'}"
+    engine, session_factory = create_session_factory(db_url)
+    init_db(engine)
+    service = NewProjectWorkflowService(session_factory)
+
+    started = service.start_larv_full(
+        project_name="AeroTrack",
+        command=["python3", str(script)],
+        cwd=str(tmp_path),
+        start_process=True,
+    )
+    read = service.read_interactive_output(started.interactive_session.id, timeout=2)
+    assert read.status == "waiting_for_input"
+
+    service.submit_human_input(
+        started.interactive_session.id,
+        prompt_id=read.prompt_id,
+        answer="AeroTrack\n",
+    )
+    read = service.read_interactive_output(started.interactive_session.id, timeout=5)
+
+    assert "created:AeroTrack" in read.output
+    assert read.status == "completed"
