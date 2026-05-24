@@ -249,8 +249,9 @@
         <a href="#08-first-proof-of-concept">First Proof of Concept</a>
         <a href="#09-interactive-session-resume">Resumable Interactive Sessions</a>
         <a href="#10-dtt-ai-larv-skill-contract">DTT-AI Larv Skill Contract</a>
+        <a href="#11-dtt-ai-handoff">DTT-AI Handoff</a>
       </nav>
-      <p class="meta">Generated 2026-05-24T14:37:20.077Z from docs/hermes/*.md.</p>
+      <p class="meta">Generated 2026-05-24T14:46:46.268Z from docs/hermes/*.md.</p>
     </aside>
     <main>
       <section class="hero" aria-labelledby="page-title">
@@ -1500,6 +1501,105 @@ def on_larv_failed(reason: str):
             &quot;reason&quot;: reason,
         },
     )</code></pre>
+</article>
+      <article class="doc" id="11-dtt-ai-handoff" data-source="11-dtt-ai-handoff.md">
+<h1 id="11-dtt-ai-handoff-dtt-ai-handoff">DTT-AI Handoff</h1>
+<p>This is the practical integration handoff for wiring DTT-AI to Hermes Core for the external <code>larv:full</code> skill flow.</p>
+<h2 id="11-dtt-ai-handoff-scope">Scope</h2>
+<p>DTT-AI owns the actual <code>larv:full</code> skill invocation and the human-facing terminal UI.</p>
+<p>Hermes Core owns durable workflow state, transcript storage, prompt and answer audit history, artifact ingestion, and ProjectContextCandidate creation.</p>
+<p>Hermes Core does not call <code>larv:full</code> directly.</p>
+<h2 id="11-dtt-ai-handoff-environment">Environment</h2>
+<p>Hermes Core:</p>
+<pre><code>HERMES_DATABASE_URL=sqlite:///./hermes.db
+HERMES_DTT_AI_SHARED_TOKEN=&lt;shared-token&gt;</code></pre>
+<p>DTT-AI:</p>
+<pre><code>HERMES_URL=https://&lt;hermes-core-host&gt;
+HERMES_DTT_AI_SHARED_TOKEN=&lt;same-shared-token&gt;</code></pre>
+<p>When <code>HERMES_DTT_AI_SHARED_TOKEN</code> is set in Hermes Core, DTT-AI must send:</p>
+<pre><code>X-Hermes-Token: &lt;shared-token&gt;</code></pre>
+<h2 id="11-dtt-ai-handoff-required-event-order">Required Event Order</h2>
+<pre><code>1. DTT-AI starts the real larv:full skill in its agent/runtime environment.
+2. DTT-AI reports session-started to Hermes Core.
+3. DTT-AI streams output chunks to Hermes Core.
+4. When larv asks for input, DTT-AI reports prompt-shown to Hermes Core.
+5. The human answers in DTT-AI.
+6. DTT-AI sends the answer to the running larv skill/runtime.
+7. DTT-AI reports human-answer to Hermes Core.
+8. DTT-AI repeats output, prompt-shown, and human-answer as needed.
+9. DTT-AI reports completed with a readable artifact path, or failed with a reason.</code></pre>
+<p>Hermes returns <code>interactive_session.id</code> from <code>session-started</code>. DTT-AI must use that ID for every later request.</p>
+<h2 id="11-dtt-ai-handoff-endpoints">Endpoints</h2>
+<pre><code>POST /workflows/new-project/larv-skill/session-started
+POST /workflows/new-project/larv-skill/{session_id}/output
+POST /workflows/new-project/larv-skill/{session_id}/prompt-shown
+POST /workflows/new-project/larv-skill/{session_id}/human-answer
+POST /workflows/new-project/larv-skill/{session_id}/completed
+POST /workflows/new-project/larv-skill/{session_id}/failed</code></pre>
+<p>The full request and response contract is in <code>10-dtt-ai-larv-skill-contract.md</code>.</p>
+<h2 id="11-dtt-ai-handoff-idempotency-rules">Idempotency Rules</h2>
+<p>Every DTT-AI event should include <code>event_id</code>.</p>
+<p>Use stable event IDs:</p>
+<pre><code>&lt;dtt-session-id&gt;-started
+&lt;dtt-session-id&gt;-output-000001
+&lt;dtt-session-id&gt;-prompt-&lt;prompt-id&gt;
+&lt;dtt-session-id&gt;-answer-&lt;prompt-id&gt;
+&lt;dtt-session-id&gt;-completed
+&lt;dtt-session-id&gt;-failed</code></pre>
+<p>Retry the same request with the same <code>event_id</code>. Hermes will return the previous response with <code>idempotent_replay = true</code>.</p>
+<p>DTT-AI must not create a new <code>event_id</code> when retrying the same event.</p>
+<h2 id="11-dtt-ai-handoff-prompt-handling">Prompt Handling</h2>
+<p>For every input prompt, DTT-AI should report <code>prompt-shown</code> before reporting <code>human-answer</code>.</p>
+<p>Required fields:</p>
+<pre><code>prompt_id
+prompt</code></pre>
+<p>Recommended fields:</p>
+<pre><code>choices
+default
+is_required
+metadata.source = larv:full
+metadata.phase = &lt;detected larv phase when known&gt;</code></pre>
+<p>DTT-AI remains responsible for sending the answer to the actual running <code>larv:full</code> runtime. Hermes records the answer for audit, recovery, and future learning.</p>
+<h2 id="11-dtt-ai-handoff-artifact-requirement">Artifact Requirement</h2>
+<p>For <code>completed</code>, Hermes Core must be able to read <code>project_dir</code>.</p>
+<p>This works when DTT-AI and Hermes Core share the same filesystem or mounted storage.</p>
+<p>If they do not share a filesystem, do not call <code>completed</code> with a private DTT-AI-local path. The next contract extension should be one of:</p>
+<pre><code>artifact upload endpoint
+shared artifact bundle path
+repository URL/branch ingestion</code></pre>
+<h2 id="11-dtt-ai-handoff-reference-smoke-client">Reference Smoke Client</h2>
+<p>Start Hermes Core:</p>
+<pre><code>PYTHONPATH=src uvicorn hermes_core.app:app --host 0.0.0.0 --port 8000</code></pre>
+<p>Run the DTT-AI reference client:</p>
+<pre><code>HERMES_URL=http://127.0.0.1:8000 \
+HERMES_DTT_AI_SHARED_TOKEN=&lt;shared-token&gt; \
+python3 tools/dtt_ai_larv_skill_smoke.py --mode both</code></pre>
+<p>If Hermes Core is running without <code>HERMES_DTT_AI_SHARED_TOKEN</code>, omit the token environment variable.</p>
+<p>The script exercises:</p>
+<pre><code>completion flow: session-started -&gt; output -&gt; prompt-shown -&gt; human-answer -&gt; completed
+failure flow: session-started -&gt; failed</code></pre>
+<p>Expected summary:</p>
+<pre><code>{
+  &quot;flow&quot;: &quot;complete&quot;,
+  &quot;final_state&quot;: &quot;project_context_candidate_created&quot;
+}</code></pre>
+<pre><code>{
+  &quot;flow&quot;: &quot;failed&quot;,
+  &quot;final_state&quot;: &quot;failed&quot;,
+  &quot;session_status&quot;: &quot;recovery_required&quot;
+}</code></pre>
+<h2 id="11-dtt-ai-handoff-dtt-ai-implementation-checklist">DTT-AI Implementation Checklist</h2>
+<pre><code>[ ] Configure Hermes base URL per environment.
+[ ] Configure shared token in both DTT-AI and Hermes Core.
+[ ] Generate stable event_id values and reuse them on retries.
+[ ] Store Hermes interactive_session.id after session-started.
+[ ] Stream output chunks with sequence and stream labels.
+[ ] Report prompt-shown before showing or while showing the prompt to the human.
+[ ] Pipe the human answer to the actual larv:full runtime.
+[ ] Report human-answer after the answer is submitted.
+[ ] Report completed only when Hermes can read project_dir.
+[ ] Report failed when larv cannot continue.
+[ ] Surface Hermes 400/401/422 errors in DTT-AI operator logs.</code></pre>
 </article>
     </main>
   </div>
