@@ -7,10 +7,10 @@ class Settings(BaseSettings):
     minimax_api_key: str = ""
     minimax_base_url: str = "https://api.minimax.chat/v1"
     minimax_model: str = ""
+    dtt_ai_shared_token: str = ""
 
     model_config = SettingsConfigDict(env_prefix="HERMES_", env_file=".env", extra="ignore")
 
 
 def get_settings() -> Settings:
     return Settings()
-

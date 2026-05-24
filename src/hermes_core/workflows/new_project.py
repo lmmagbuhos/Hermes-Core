@@ -204,12 +204,19 @@ class NewProjectWorkflowService:
         session_id: str,
         *,
         output: str,
+        stream: str = "agent",
+        sequence: int | None = None,
     ) -> NewProjectWorkflowResult:
         interactive_session = self.sessions.append_transcript(session_id, output)
         run = self._get_run(interactive_session.run_id)
         self.events.emit(
             "terminal.stdout",
-            {"session_id": session_id, "bytes": len(output)},
+            {
+                "session_id": session_id,
+                "bytes": len(output),
+                "stream": stream,
+                "sequence": sequence,
+            },
             run_id=run.id,
         )
         return NewProjectWorkflowResult(run=run, interactive_session=interactive_session)
@@ -244,8 +251,13 @@ class NewProjectWorkflowService:
         *,
         project_dir: Path,
     ) -> NewProjectWorkflowResult:
+        if not project_dir.exists():
+            raise ValueError(f"project_dir does not exist: {project_dir}")
         interactive_session = self.sessions.mark_completed(session_id)
-        transcript = Path(interactive_session.transcript_ref).read_text(encoding="utf-8")
+        transcript_path = Path(interactive_session.transcript_ref)
+        transcript = (
+            transcript_path.read_text(encoding="utf-8") if transcript_path.exists() else ""
+        )
         run = self.runs.transition(interactive_session.run_id, "larv_full_completed")
         blueprint = ingest_project_artifacts(project_dir=project_dir, transcript=transcript)
         run = self.runs.transition(
@@ -266,6 +278,25 @@ class NewProjectWorkflowService:
         self.events.emit(
             "larv.skill_session_completed",
             {"session_id": session_id, "candidate_id": candidate.id},
+            run_id=run.id,
+        )
+        return NewProjectWorkflowResult(run=run, interactive_session=interactive_session)
+
+    def record_larv_skill_failed(
+        self,
+        session_id: str,
+        *,
+        reason: str,
+    ) -> NewProjectWorkflowResult:
+        interactive_session = self.sessions.mark_recovery_required(session_id)
+        run = self.runs.transition(
+            interactive_session.run_id,
+            "failed",
+            {"failure_reason": reason},
+        )
+        self.events.emit(
+            "larv.skill_session_failed",
+            {"session_id": session_id, "reason": reason},
             run_id=run.id,
         )
         return NewProjectWorkflowResult(run=run, interactive_session=interactive_session)

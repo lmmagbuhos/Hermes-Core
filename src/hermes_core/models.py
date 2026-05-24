@@ -95,3 +95,13 @@ class ProjectContextCandidate(Base):
         default=utc_now,
         onupdate=utc_now,
     )
+
+
+class IdempotencyRecord(Base):
+    __tablename__ = "idempotency_records"
+
+    event_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    run_id: Mapped[int | None] = mapped_column(nullable=True)
+    endpoint: Mapped[str] = mapped_column(String(200), nullable=False)
+    response_payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)

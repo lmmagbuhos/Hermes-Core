@@ -28,6 +28,35 @@ Example local development URL:
 http://127.0.0.1:8000
 ```
 
+## Authentication
+
+When `HERMES_DTT_AI_SHARED_TOKEN` is configured in Hermes Core, every DTT-AI contract request must include:
+
+```http
+X-Hermes-Token: <shared-token>
+```
+
+Hermes returns `401` when the token is missing or incorrect. Local development can leave `HERMES_DTT_AI_SHARED_TOKEN` empty to disable this check.
+
+## Idempotency
+
+Every lifecycle request should include a stable `event_id`.
+
+```json
+{
+  "event_id": "dtt-session-123-output-000001"
+}
+```
+
+Rules:
+
+```text
+event_id must be globally unique per DTT-AI event.
+DTT-AI should reuse the same event_id when retrying the same request.
+Hermes returns the previously recorded response with idempotent_replay = true for duplicate event_id values.
+Hermes does not re-append duplicate output chunks when event_id is replayed.
+```
+
 ## Sequence
 
 DTT-AI should call the endpoints in this order:
@@ -40,6 +69,12 @@ DTT-AI should call the endpoints in this order:
 5. POST /workflows/new-project/larv-skill/{session_id}/completed
 ```
 
+If the `larv:full` skill crashes, is cancelled, or cannot continue, call:
+
+```text
+POST /workflows/new-project/larv-skill/{session_id}/failed
+```
+
 Hermes returns its own `interactive_session.id`. Use that value as `{session_id}` in later calls.
 
 ## 1. Session Started
@@ -49,12 +84,14 @@ Call this immediately after DTT-AI starts the `larv:full` skill.
 ```http
 POST /workflows/new-project/larv-skill/session-started
 Content-Type: application/json
+X-Hermes-Token: <shared-token>
 ```
 
 Request:
 
 ```json
 {
+  "event_id": "dtt-session-123-started",
   "project_name": "AeroTrack",
   "external_session_id": "dtt-session-123",
   "cwd": "/home/projects/AeroTrack"
@@ -64,6 +101,9 @@ Request:
 Fields:
 
 ```text
+event_id
+  Stable DTT-AI event identifier for idempotent retries.
+
 project_name
   Human-readable project name.
 
@@ -98,7 +138,8 @@ Response:
     "status": "running",
     "last_prompt": null,
     "transcript_ref": "/home/projects/AeroTrack/.hermes/transcripts/run_1.log"
-  }
+  },
+  "idempotent_replay": false
 }
 ```
 
@@ -109,19 +150,32 @@ Call this whenever DTT-AI receives output from the skill/agent session.
 ```http
 POST /workflows/new-project/larv-skill/{session_id}/output
 Content-Type: application/json
+X-Hermes-Token: <shared-token>
 ```
 
 Request:
 
 ```json
 {
+  "event_id": "dtt-session-123-output-000001",
+  "sequence": 1,
+  "stream": "stdout",
   "output": "Which backend stack should be used?"
 }
 ```
 
-Current fields:
+Fields:
 
 ```text
+event_id
+  Stable DTT-AI event identifier for idempotent retries.
+
+sequence
+  Monotonically increasing output chunk number within the external DTT-AI session.
+
+stream
+  Output source label. Use stdout, stderr, or agent.
+
 output
   Raw text chunk to append to Hermes transcript.
 ```
@@ -144,7 +198,8 @@ Response:
     "status": "running",
     "last_prompt": null,
     "transcript_ref": "/home/projects/AeroTrack/.hermes/transcripts/run_1.log"
-  }
+  },
+  "idempotent_replay": false
 }
 ```
 
@@ -155,12 +210,14 @@ Call this after the human answers a `larv:full` prompt in DTT-AI.
 ```http
 POST /workflows/new-project/larv-skill/{session_id}/human-answer
 Content-Type: application/json
+X-Hermes-Token: <shared-token>
 ```
 
 Request:
 
 ```json
 {
+  "event_id": "dtt-session-123-answer-stack-choice-001",
   "prompt_id": "stack-choice-001",
   "answer": "Fastify and Next.js"
 }
@@ -169,6 +226,9 @@ Request:
 Fields:
 
 ```text
+event_id
+  Stable DTT-AI event identifier for idempotent retries.
+
 prompt_id
   DTT-AI prompt identifier. Must be stable per prompt.
 
@@ -191,12 +251,14 @@ Call this when the `larv:full` skill finishes and generated artifacts are availa
 ```http
 POST /workflows/new-project/larv-skill/{session_id}/completed
 Content-Type: application/json
+X-Hermes-Token: <shared-token>
 ```
 
 Request:
 
 ```json
 {
+  "event_id": "dtt-session-123-completed",
   "project_dir": "/home/projects/AeroTrack"
 }
 ```
@@ -204,6 +266,9 @@ Request:
 Fields:
 
 ```text
+event_id
+  Stable DTT-AI event identifier for idempotent retries.
+
 project_dir
   Directory where larv generated project docs/code/artifacts.
   Hermes Core must be able to read this path.
@@ -225,6 +290,44 @@ Hermes will:
 5. create ProjectContextCandidate
 ```
 
+If `project_dir` does not exist or is not readable by Hermes Core, Hermes returns `400` with a validation detail and does not mark the session completed.
+
+## 5. Failed
+
+Call this when DTT-AI knows the `larv:full` skill cannot continue.
+
+```http
+POST /workflows/new-project/larv-skill/{session_id}/failed
+Content-Type: application/json
+X-Hermes-Token: <shared-token>
+```
+
+Request:
+
+```json
+{
+  "event_id": "dtt-session-123-failed",
+  "reason": "larv skill crashed before artifact generation"
+}
+```
+
+Fields:
+
+```text
+event_id
+  Stable DTT-AI event identifier for idempotent retries.
+
+reason
+  Human-readable failure reason captured by DTT-AI.
+```
+
+Response state:
+
+```text
+run.state = failed
+interactive_session.status = recovery_required
+```
+
 ## Artifact Access Requirement
 
 Hermes Core must be able to read `project_dir`.
@@ -242,18 +345,14 @@ repository URL/branch after generation
 
 The current Hermes implementation expects a readable local `project_dir`.
 
-## Current Limitations
+## Remaining Limitations
 
-The current API records core lifecycle events. The next hardening pass should add:
+The current API now supports shared-token auth, idempotency, output sequencing metadata, stream labels, failure reporting, and artifact path validation. Remaining contract gaps:
 
 ```text
-auth/shared token
-idempotency keys
-output sequence numbers
-stdout/stderr/agent stream labels
-failed/interrupted endpoint
-artifact path validation details
 structured prompt metadata
+artifact upload endpoint for non-shared filesystems
+repository URL ingestion for generated projects
 ```
 
 ## Minimal DTT-AI Pseudocode
@@ -262,10 +361,13 @@ structured prompt metadata
 import requests
 
 HERMES = "http://127.0.0.1:8000"
+HEADERS = {"X-Hermes-Token": HERMES_TOKEN}
 
 started = requests.post(
     f"{HERMES}/workflows/new-project/larv-skill/session-started",
+    headers=HEADERS,
     json={
+        "event_id": f"{dtt_session_id}-started",
         "project_name": "AeroTrack",
         "external_session_id": dtt_session_id,
         "cwd": project_dir,
@@ -273,23 +375,50 @@ started = requests.post(
 ).json()
 
 session_id = started["interactive_session"]["id"]
+sequence = 0
 
 def on_larv_output(text: str):
+    global sequence
+    sequence += 1
     requests.post(
         f"{HERMES}/workflows/new-project/larv-skill/{session_id}/output",
-        json={"output": text},
+        headers=HEADERS,
+        json={
+            "event_id": f"{dtt_session_id}-output-{sequence:06d}",
+            "sequence": sequence,
+            "stream": "stdout",
+            "output": text,
+        },
     )
 
 def on_human_answer(prompt_id: str, answer: str):
     requests.post(
         f"{HERMES}/workflows/new-project/larv-skill/{session_id}/human-answer",
-        json={"prompt_id": prompt_id, "answer": answer},
+        headers=HEADERS,
+        json={
+            "event_id": f"{dtt_session_id}-answer-{prompt_id}",
+            "prompt_id": prompt_id,
+            "answer": answer,
+        },
     )
 
 def on_larv_completed(project_dir: str):
     requests.post(
         f"{HERMES}/workflows/new-project/larv-skill/{session_id}/completed",
-        json={"project_dir": project_dir},
+        headers=HEADERS,
+        json={
+            "event_id": f"{dtt_session_id}-completed",
+            "project_dir": project_dir,
+        },
+    )
+
+def on_larv_failed(reason: str):
+    requests.post(
+        f"{HERMES}/workflows/new-project/larv-skill/{session_id}/failed",
+        headers=HEADERS,
+        json={
+            "event_id": f"{dtt_session_id}-failed",
+            "reason": reason,
+        },
     )
 ```
-
