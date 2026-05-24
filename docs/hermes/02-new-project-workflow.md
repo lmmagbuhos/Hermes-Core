@@ -2,23 +2,33 @@
 
 For new projects, `larv:full` is the interactive discovery and scaffolding pipeline, not the whole builder.
 
+Operational boundary:
+
+```text
+larv:full is a skill/agent-runtime workflow, not a shell executable.
+DTT-AI or the agent runtime invokes larv:full.
+Hermes Core records the session, receives output/input/completion events, ingests
+artifacts, and creates ProjectContextCandidate.
+```
+
 ## Workflow
 
 ```text
 1. Request received
 2. Hermes-Triage normalization
 3. Hermes-Manager policy check
-4. Hermes-ProjectManager starts larv:full
-5. Human interacts with larv:full
-6. Larv artifact ingestion
-7. ProjectContextCandidate created
-8. ProjectManager creates worker plan
-9. Tactical workers execute sequentially as needed
-10. Hermes-QA validates
-11. Hermes-Manager final review
-12. Permanent Hermes-{projectName} created
-13. Learning candidates created
-14. Completion report produced
+4. DTT-AI/agent runtime invokes larv:full and reports session start to Hermes
+5. Human interacts with larv:full through DTT-AI
+6. DTT-AI reports output, answers, completion, and artifacts to Hermes
+7. Larv artifact ingestion
+8. ProjectContextCandidate created
+9. ProjectManager creates worker plan
+10. Tactical workers execute sequentially as needed
+11. Hermes-QA validates
+12. Hermes-Manager final review
+13. Permanent Hermes-{projectName} created
+14. Learning candidates created
+15. Completion report produced
 ```
 
 ## Request Received
@@ -55,21 +65,24 @@ standard auth/config expectations
 forbidden technologies or risky choices
 ```
 
-## larv:full Execution
+## larv:full Skill Invocation
 
-Hermes-ProjectManager starts `larv:full` through the execution adapter.
+DTT-AI or the agent runtime invokes the `larv:full` skill.
 
-`larv:full` asks project-shaping questions. DTT-AI later displays the terminal session and lets the human answer prompts.
+`larv:full` asks project-shaping questions. DTT-AI displays the skill/session output and lets the human answer prompts.
 
-Hermes stores:
+DTT-AI reports these lifecycle events to Hermes Core:
 
 ```text
-terminal transcript
-prompt/answer history
-generated files
-generated docs
-warnings and errors
+skill session started
+output/transcript chunks
+human answers
+completion
+artifact location
+warnings/errors
 ```
+
+Hermes Core stores the transcript, prompt/answer history, run state, events, and artifact references.
 
 ## Artifact Ingestion
 
@@ -153,4 +166,3 @@ initial patch/build history
 ```
 
 Raw creation transcripts remain archived but are not loaded by default.
-

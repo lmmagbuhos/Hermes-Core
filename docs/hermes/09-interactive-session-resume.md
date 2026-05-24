@@ -1,6 +1,14 @@
 # Resumable Interactive Sessions
 
-`larv:full` asks questions mid-run. Hermes must treat this as normal workflow state, not as a broken SSH connection.
+Interactive commands and agent/skill sessions may ask questions mid-run. Hermes must treat this as normal workflow state, not as a broken connection.
+
+For `larv:full` specifically:
+
+```text
+larv:full is a skill/agent-runtime workflow, not a shell executable.
+DTT-AI or the agent runtime owns invocation.
+Hermes Core records session metadata, output, answers, completion, and artifacts.
+```
 
 The design goal:
 
@@ -45,14 +53,27 @@ recovery_required
 expired
 ```
 
-## larv:full Flow
+## External larv:full Skill Flow
 
 ```text
-1. Hermes-ProjectManager starts larv:full.
+1. DTT-AI/agent runtime invokes larv:full.
+2. DTT-AI reports session start to Hermes Core.
+3. Hermes stores an InteractiveSessionRecord with command ["skill:larv:full"].
+4. DTT-AI streams output chunks to Hermes Core.
+5. Human answers prompts in DTT-AI.
+6. DTT-AI reports prompt answers to Hermes Core.
+7. DTT-AI reports completion and artifact location.
+8. Hermes ingests artifacts and creates ProjectContextCandidate.
+```
+
+## Shell Command Flow
+
+```text
+1. Hermes-ProjectManager starts an interactive shell command.
 2. hermes-runner opens a persistent PTY/SSH-backed process.
 3. Session ID is stored immediately.
 4. stdout/stderr are streamed and appended to transcript storage.
-5. When larv:full asks a question, prompt detection marks the session as
+5. When the command asks a question, prompt detection marks the session as
    waiting_for_input.
 6. DTT-AI displays the question to the human.
 7. Human submits an answer.
@@ -146,4 +167,3 @@ completion status
 ```
 
 The transcript supports audit, artifact ingestion, recovery decisions, and future project memory distillation.
-

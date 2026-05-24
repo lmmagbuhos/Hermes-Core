@@ -249,7 +249,7 @@
         <a href="#08-first-proof-of-concept">First Proof of Concept</a>
         <a href="#09-interactive-session-resume">Resumable Interactive Sessions</a>
       </nav>
-      <p class="meta">Generated 2026-05-24T06:36:10.485Z from docs/hermes/*.md.</p>
+      <p class="meta">Generated 2026-05-24T07:19:53.635Z from docs/hermes/*.md.</p>
     </aside>
     <main>
       <section class="hero" aria-labelledby="page-title">
@@ -445,21 +445,27 @@ learning.candidate_created</code></pre>
       <article class="doc" id="02-new-project-workflow" data-source="02-new-project-workflow.md">
 <h1 id="02-new-project-workflow-new-project-creation-workflow">New Project Creation Workflow</h1>
 <p>For new projects, <code>larv:full</code> is the interactive discovery and scaffolding pipeline, not the whole builder.</p>
+<p>Operational boundary:</p>
+<pre><code>larv:full is a skill/agent-runtime workflow, not a shell executable.
+DTT-AI or the agent runtime invokes larv:full.
+Hermes Core records the session, receives output/input/completion events, ingests
+artifacts, and creates ProjectContextCandidate.</code></pre>
 <h2 id="02-new-project-workflow-workflow">Workflow</h2>
 <pre><code>1. Request received
 2. Hermes-Triage normalization
 3. Hermes-Manager policy check
-4. Hermes-ProjectManager starts larv:full
-5. Human interacts with larv:full
-6. Larv artifact ingestion
-7. ProjectContextCandidate created
-8. ProjectManager creates worker plan
-9. Tactical workers execute sequentially as needed
-10. Hermes-QA validates
-11. Hermes-Manager final review
-12. Permanent Hermes-{projectName} created
-13. Learning candidates created
-14. Completion report produced</code></pre>
+4. DTT-AI/agent runtime invokes larv:full and reports session start to Hermes
+5. Human interacts with larv:full through DTT-AI
+6. DTT-AI reports output, answers, completion, and artifacts to Hermes
+7. Larv artifact ingestion
+8. ProjectContextCandidate created
+9. ProjectManager creates worker plan
+10. Tactical workers execute sequentially as needed
+11. Hermes-QA validates
+12. Hermes-Manager final review
+13. Permanent Hermes-{projectName} created
+14. Learning candidates created
+15. Completion report produced</code></pre>
 <h2 id="02-new-project-workflow-request-received">Request Received</h2>
 <p>A human submits a request such as:</p>
 <pre><code>Create AeroTrack with Fastify and Next.js.</code></pre>
@@ -478,15 +484,17 @@ required institutional defaults
 security requirements
 standard auth/config expectations
 forbidden technologies or risky choices</code></pre>
-<h2 id="02-new-project-workflow-larv-full-execution">larv:full Execution</h2>
-<p>Hermes-ProjectManager starts <code>larv:full</code> through the execution adapter.</p>
-<p><code>larv:full</code> asks project-shaping questions. DTT-AI later displays the terminal session and lets the human answer prompts.</p>
-<p>Hermes stores:</p>
-<pre><code>terminal transcript
-prompt/answer history
-generated files
-generated docs
-warnings and errors</code></pre>
+<h2 id="02-new-project-workflow-larv-full-skill-invocation">larv:full Skill Invocation</h2>
+<p>DTT-AI or the agent runtime invokes the <code>larv:full</code> skill.</p>
+<p><code>larv:full</code> asks project-shaping questions. DTT-AI displays the skill/session output and lets the human answer prompts.</p>
+<p>DTT-AI reports these lifecycle events to Hermes Core:</p>
+<pre><code>skill session started
+output/transcript chunks
+human answers
+completion
+artifact location
+warnings/errors</code></pre>
+<p>Hermes Core stores the transcript, prompt/answer history, run state, events, and artifact references.</p>
 <h2 id="02-new-project-workflow-artifact-ingestion">Artifact Ingestion</h2>
 <p>After <code>larv:full</code> completes, Hermes reads:</p>
 <pre><code>generated docs
@@ -929,16 +937,19 @@ report.ready
 learning.candidate_created
 memory.promoted</code></pre>
 <h2 id="07-dtt-ai-integration-contract-new-project-interaction">New Project Interaction</h2>
-<pre><code>Hermes-ProjectManager requests interactive terminal.
-hermes-runner starts larv:full.
-Terminal output streams as events.
-DTT-AI displays output.
-Prompt detector identifies question/input need.
-DTT-AI shows human choices/input box.
-Human responds.
-DTT-AI sends input back.
-hermes-runner writes stdin.
-Hermes records prompt/answer history.</code></pre>
+<pre><code>DTT-AI/agent runtime invokes the larv:full skill.
+DTT-AI displays skill/session output.
+DTT-AI captures human answers to larv prompts.
+DTT-AI reports output and answers to Hermes Core.
+Hermes Core records run state, transcript, prompt/answer history, and events.
+DTT-AI reports completion and artifact location.
+Hermes Core ingests artifacts and creates ProjectContextCandidate.</code></pre>
+<p>Hermes Core does not assume <code>larv:full</code> is a shell executable.</p>
+<p>The reporting endpoints are:</p>
+<pre><code>POST /workflows/new-project/larv-skill/session-started
+POST /workflows/new-project/larv-skill/{session_id}/output
+POST /workflows/new-project/larv-skill/{session_id}/human-answer
+POST /workflows/new-project/larv-skill/{session_id}/completed</code></pre>
 <h2 id="07-dtt-ai-integration-contract-issue-fix-interaction">Issue Fix Interaction</h2>
 <pre><code>Hermes runs workflow.
 DTT-AI shows bot status and logs.
@@ -960,26 +971,28 @@ hermes-core stores and governs them.</code></pre>
 <p>The first proof must execute real workflows. It must not be a fake MVP, simulated bot demo, or UI-only prototype.</p>
 <h2 id="08-first-proof-of-concept-poc-a-new-project-creation">POC A: New Project Creation</h2>
 <p>Goal:</p>
-<pre><code>Use Hermes to create one real project through larv:full, ingest the result,
-validate it, and create a permanent project agent.</code></pre>
+<pre><code>Use DTT-AI/agent runtime to invoke the real larv:full skill while Hermes records
+the session, ingests the result, validates it, and creates a permanent project
+agent.</code></pre>
 <p>Required behavior:</p>
 <pre><code>1. Human submits a new project request.
 2. Hermes-Triage normalizes it.
 3. Hermes-Manager checks stack/policy requirements.
-4. Hermes-ProjectManager runs larv:full.
-5. Human answers larv:full prompts through an interactive terminal session.
-6. Hermes ingests larv artifacts and transcript.
-7. Hermes creates ProjectContextCandidate.
-8. Hermes-ProjectManager creates sequential worker tasks.
-9. Hermes-Frontend, Hermes-Backend, and Hermes-Database run only if needed.
-10. Hermes-QA validates tests/build/sandbox.
-11. Hermes-Manager produces final review.
-12. Permanent Hermes-{projectName} is created after validation.
-13. Learning candidates are created.
-14. Completion report is produced.</code></pre>
+4. DTT-AI/agent runtime invokes the larv:full skill.
+5. Human answers larv:full prompts through DTT-AI.
+6. DTT-AI reports transcript/output/answers/completion to Hermes.
+7. Hermes ingests larv artifacts and transcript.
+8. Hermes creates ProjectContextCandidate.
+9. Hermes-ProjectManager creates sequential worker tasks.
+10. Hermes-Frontend, Hermes-Backend, and Hermes-Database run only if needed.
+11. Hermes-QA validates tests/build/sandbox.
+12. Hermes-Manager produces final review.
+13. Permanent Hermes-{projectName} is created after validation.
+14. Learning candidates are created.
+15. Completion report is produced.</code></pre>
 <p>This proves:</p>
 <pre><code>interactive project discovery
-real command execution
+real larv skill invocation through DTT-AI/agent runtime
 artifact ingestion
 workflow state
 profile-backed agents
@@ -1032,7 +1045,11 @@ learning records</code></pre>
 </article>
       <article class="doc" id="09-interactive-session-resume" data-source="09-interactive-session-resume.md">
 <h1 id="09-interactive-session-resume-resumable-interactive-sessions">Resumable Interactive Sessions</h1>
-<p><code>larv:full</code> asks questions mid-run. Hermes must treat this as normal workflow state, not as a broken SSH connection.</p>
+<p>Interactive commands and agent/skill sessions may ask questions mid-run. Hermes must treat this as normal workflow state, not as a broken connection.</p>
+<p>For <code>larv:full</code> specifically:</p>
+<pre><code>larv:full is a skill/agent-runtime workflow, not a shell executable.
+DTT-AI or the agent runtime owns invocation.
+Hermes Core records session metadata, output, answers, completion, and artifacts.</code></pre>
 <p>The design goal:</p>
 <pre><code>DTT-AI can disconnect.
 The human browser can disconnect.
@@ -1063,12 +1080,21 @@ failed
 interrupted
 recovery_required
 expired</code></pre>
-<h2 id="09-interactive-session-resume-larv-full-flow">larv:full Flow</h2>
-<pre><code>1. Hermes-ProjectManager starts larv:full.
+<h2 id="09-interactive-session-resume-external-larv-full-skill-flow">External larv:full Skill Flow</h2>
+<pre><code>1. DTT-AI/agent runtime invokes larv:full.
+2. DTT-AI reports session start to Hermes Core.
+3. Hermes stores an InteractiveSessionRecord with command [&quot;skill:larv:full&quot;].
+4. DTT-AI streams output chunks to Hermes Core.
+5. Human answers prompts in DTT-AI.
+6. DTT-AI reports prompt answers to Hermes Core.
+7. DTT-AI reports completion and artifact location.
+8. Hermes ingests artifacts and creates ProjectContextCandidate.</code></pre>
+<h2 id="09-interactive-session-resume-shell-command-flow">Shell Command Flow</h2>
+<pre><code>1. Hermes-ProjectManager starts an interactive shell command.
 2. hermes-runner opens a persistent PTY/SSH-backed process.
 3. Session ID is stored immediately.
 4. stdout/stderr are streamed and appended to transcript storage.
-5. When larv:full asks a question, prompt detection marks the session as
+5. When the command asks a question, prompt detection marks the session as
    waiting_for_input.
 6. DTT-AI displays the question to the human.
 7. Human submits an answer.

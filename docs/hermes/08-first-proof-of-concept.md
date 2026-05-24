@@ -7,8 +7,9 @@ The first proof must execute real workflows. It must not be a fake MVP, simulate
 Goal:
 
 ```text
-Use Hermes to create one real project through larv:full, ingest the result,
-validate it, and create a permanent project agent.
+Use DTT-AI/agent runtime to invoke the real larv:full skill while Hermes records
+the session, ingests the result, validates it, and creates a permanent project
+agent.
 ```
 
 Required behavior:
@@ -17,24 +18,25 @@ Required behavior:
 1. Human submits a new project request.
 2. Hermes-Triage normalizes it.
 3. Hermes-Manager checks stack/policy requirements.
-4. Hermes-ProjectManager runs larv:full.
-5. Human answers larv:full prompts through an interactive terminal session.
-6. Hermes ingests larv artifacts and transcript.
-7. Hermes creates ProjectContextCandidate.
-8. Hermes-ProjectManager creates sequential worker tasks.
-9. Hermes-Frontend, Hermes-Backend, and Hermes-Database run only if needed.
-10. Hermes-QA validates tests/build/sandbox.
-11. Hermes-Manager produces final review.
-12. Permanent Hermes-{projectName} is created after validation.
-13. Learning candidates are created.
-14. Completion report is produced.
+4. DTT-AI/agent runtime invokes the larv:full skill.
+5. Human answers larv:full prompts through DTT-AI.
+6. DTT-AI reports transcript/output/answers/completion to Hermes.
+7. Hermes ingests larv artifacts and transcript.
+8. Hermes creates ProjectContextCandidate.
+9. Hermes-ProjectManager creates sequential worker tasks.
+10. Hermes-Frontend, Hermes-Backend, and Hermes-Database run only if needed.
+11. Hermes-QA validates tests/build/sandbox.
+12. Hermes-Manager produces final review.
+13. Permanent Hermes-{projectName} is created after validation.
+14. Learning candidates are created.
+15. Completion report is produced.
 ```
 
 This proves:
 
 ```text
 interactive project discovery
-real command execution
+real larv skill invocation through DTT-AI/agent runtime
 artifact ingestion
 workflow state
 profile-backed agents
@@ -106,4 +108,3 @@ real validation
 real reports
 learning records
 ```
-

@@ -80,16 +80,24 @@ memory.promoted
 ## New Project Interaction
 
 ```text
-Hermes-ProjectManager requests interactive terminal.
-hermes-runner starts larv:full.
-Terminal output streams as events.
-DTT-AI displays output.
-Prompt detector identifies question/input need.
-DTT-AI shows human choices/input box.
-Human responds.
-DTT-AI sends input back.
-hermes-runner writes stdin.
-Hermes records prompt/answer history.
+DTT-AI/agent runtime invokes the larv:full skill.
+DTT-AI displays skill/session output.
+DTT-AI captures human answers to larv prompts.
+DTT-AI reports output and answers to Hermes Core.
+Hermes Core records run state, transcript, prompt/answer history, and events.
+DTT-AI reports completion and artifact location.
+Hermes Core ingests artifacts and creates ProjectContextCandidate.
+```
+
+Hermes Core does not assume `larv:full` is a shell executable.
+
+The reporting endpoints are:
+
+```text
+POST /workflows/new-project/larv-skill/session-started
+POST /workflows/new-project/larv-skill/{session_id}/output
+POST /workflows/new-project/larv-skill/{session_id}/human-answer
+POST /workflows/new-project/larv-skill/{session_id}/completed
 ```
 
 ## Issue Fix Interaction
@@ -118,4 +126,3 @@ DTT-AI is not the source of Hermes memory.
 DTT-AI displays memory, reports, and events.
 hermes-core stores and governs them.
 ```
-

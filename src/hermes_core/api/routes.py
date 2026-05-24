@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter
@@ -32,6 +33,25 @@ class WaitingForInputRequest(BaseModel):
 class SubmitInputRequest(BaseModel):
     prompt_id: str
     answer: str
+
+
+class LarvSkillSessionStartedRequest(BaseModel):
+    project_name: str
+    external_session_id: str
+    cwd: str
+
+
+class LarvSkillOutputRequest(BaseModel):
+    output: str
+
+
+class LarvSkillHumanAnswerRequest(BaseModel):
+    prompt_id: str
+    answer: str
+
+
+class LarvSkillCompletedRequest(BaseModel):
+    project_dir: str
 
 
 @router.get("/health")
@@ -154,3 +174,53 @@ def read_interactive_output(session_id: str, timeout: float = 0.2) -> dict[str, 
         "status": result.status,
         "prompt_id": result.prompt_id,
     }
+
+
+@router.post("/workflows/new-project/larv-skill/session-started")
+def record_larv_skill_session_started(
+    request: LarvSkillSessionStartedRequest,
+) -> dict[str, Any]:
+    service = _workflow_service()
+    result = service.record_larv_skill_session_started(
+        project_name=request.project_name,
+        external_session_id=request.external_session_id,
+        cwd=request.cwd,
+    )
+    return _workflow_result_payload(result)
+
+
+@router.post("/workflows/new-project/larv-skill/{session_id}/output")
+def record_larv_skill_output(
+    session_id: str,
+    request: LarvSkillOutputRequest,
+) -> dict[str, Any]:
+    service = _workflow_service()
+    result = service.record_larv_skill_output(session_id, output=request.output)
+    return _workflow_result_payload(result)
+
+
+@router.post("/workflows/new-project/larv-skill/{session_id}/human-answer")
+def record_larv_skill_human_answer(
+    session_id: str,
+    request: LarvSkillHumanAnswerRequest,
+) -> dict[str, Any]:
+    service = _workflow_service()
+    result = service.record_larv_skill_human_answer(
+        session_id,
+        prompt_id=request.prompt_id,
+        answer=request.answer,
+    )
+    return _workflow_result_payload(result)
+
+
+@router.post("/workflows/new-project/larv-skill/{session_id}/completed")
+def complete_larv_skill_session(
+    session_id: str,
+    request: LarvSkillCompletedRequest,
+) -> dict[str, Any]:
+    service = _workflow_service()
+    result = service.complete_external_larv_skill_session(
+        session_id,
+        project_dir=Path(request.project_dir),
+    )
+    return _workflow_result_payload(result)
