@@ -50,6 +50,10 @@ class InteractiveSessionService:
         *,
         prompt: str,
         prompt_id: str,
+        choices: list[str] | None = None,
+        default: str | None = None,
+        is_required: bool = True,
+        metadata: dict[str, object] | None = None,
     ) -> InteractiveSessionRecord:
         with self.session_factory() as db:
             record = db.get(InteractiveSessionRecord, session_id)
@@ -62,6 +66,10 @@ class InteractiveSessionService:
                 {
                     "prompt_id": prompt_id,
                     "prompt": prompt,
+                    "choices": choices or [],
+                    "default": default,
+                    "is_required": is_required,
+                    "metadata": metadata or {},
                 },
             ]
             db.add(record)

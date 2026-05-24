@@ -250,7 +250,7 @@
         <a href="#09-interactive-session-resume">Resumable Interactive Sessions</a>
         <a href="#10-dtt-ai-larv-skill-contract">DTT-AI Larv Skill Contract</a>
       </nav>
-      <p class="meta">Generated 2026-05-24T11:52:27.733Z from docs/hermes/*.md.</p>
+      <p class="meta">Generated 2026-05-24T14:37:20.077Z from docs/hermes/*.md.</p>
     </aside>
     <main>
       <section class="hero" aria-labelledby="page-title">
@@ -491,6 +491,7 @@ forbidden technologies or risky choices</code></pre>
 <p>DTT-AI reports these lifecycle events to Hermes Core:</p>
 <pre><code>skill session started
 output/transcript chunks
+structured prompts shown
 human answers
 completion
 artifact location
@@ -940,8 +941,9 @@ memory.promoted</code></pre>
 <h2 id="07-dtt-ai-integration-contract-new-project-interaction">New Project Interaction</h2>
 <pre><code>DTT-AI/agent runtime invokes the larv:full skill.
 DTT-AI displays skill/session output.
+DTT-AI reports structured prompts when larv asks for input.
 DTT-AI captures human answers to larv prompts.
-DTT-AI reports output and answers to Hermes Core.
+DTT-AI reports output, prompts, and answers to Hermes Core.
 Hermes Core records run state, transcript, prompt/answer history, and events.
 DTT-AI reports completion and artifact location.
 Hermes Core ingests artifacts and creates ProjectContextCandidate.</code></pre>
@@ -949,8 +951,10 @@ Hermes Core ingests artifacts and creates ProjectContextCandidate.</code></pre>
 <p>The reporting endpoints are:</p>
 <pre><code>POST /workflows/new-project/larv-skill/session-started
 POST /workflows/new-project/larv-skill/{session_id}/output
+POST /workflows/new-project/larv-skill/{session_id}/prompt-shown
 POST /workflows/new-project/larv-skill/{session_id}/human-answer
-POST /workflows/new-project/larv-skill/{session_id}/completed</code></pre>
+POST /workflows/new-project/larv-skill/{session_id}/completed
+POST /workflows/new-project/larv-skill/{session_id}/failed</code></pre>
 <h2 id="07-dtt-ai-integration-contract-issue-fix-interaction">Issue Fix Interaction</h2>
 <pre><code>Hermes runs workflow.
 DTT-AI shows bot status and logs.
@@ -1086,10 +1090,11 @@ expired</code></pre>
 2. DTT-AI reports session start to Hermes Core.
 3. Hermes stores an InteractiveSessionRecord with command [&quot;skill:larv:full&quot;].
 4. DTT-AI streams output chunks to Hermes Core.
-5. Human answers prompts in DTT-AI.
-6. DTT-AI reports prompt answers to Hermes Core.
-7. DTT-AI reports completion and artifact location.
-8. Hermes ingests artifacts and creates ProjectContextCandidate.</code></pre>
+5. DTT-AI reports structured prompts when larv asks for input.
+6. Human answers prompts in DTT-AI.
+7. DTT-AI reports prompt answers to Hermes Core.
+8. DTT-AI reports completion and artifact location.
+9. Hermes ingests artifacts and creates ProjectContextCandidate.</code></pre>
 <h2 id="09-interactive-session-resume-shell-command-flow">Shell Command Flow</h2>
 <pre><code>1. Hermes-ProjectManager starts an interactive shell command.
 2. hermes-runner opens a persistent PTY/SSH-backed process.
@@ -1122,15 +1127,18 @@ larv_full_recovery_required</code></pre>
 question-like output
 process idle state
 input expected heuristics</code></pre>
-<p>Longer-term, <code>larv:full</code> should emit structured prompt events.</p>
-<p>Example future event:</p>
+<p>For external <code>larv:full</code> skill sessions, DTT-AI reports structured prompt events through Hermes Core.</p>
+<p>Example prompt payload:</p>
 <pre><code>{
-  &quot;type&quot;: &quot;prompt.required&quot;,
-  &quot;session_id&quot;: &quot;sess_123&quot;,
+  &quot;event_id&quot;: &quot;dtt-session-123-prompt-project-stack-choice&quot;,
   &quot;prompt_id&quot;: &quot;project_stack_choice&quot;,
-  &quot;question&quot;: &quot;Which stack do you want?&quot;,
-  &quot;options&quot;: [&quot;Laravel&quot;, &quot;Fastify&quot;, &quot;Next.js&quot;],
-  &quot;input_type&quot;: &quot;single_choice&quot;
+  &quot;prompt&quot;: &quot;Which stack do you want?&quot;,
+  &quot;choices&quot;: [&quot;Laravel&quot;, &quot;Fastify&quot;, &quot;Next.js&quot;],
+  &quot;default&quot;: &quot;Fastify&quot;,
+  &quot;is_required&quot;: true,
+  &quot;metadata&quot;: {
+    &quot;input_type&quot;: &quot;single_choice&quot;
+  }
 }</code></pre>
 <h2 id="09-interactive-session-resume-stdin-replay-protection">Stdin Replay Protection</h2>
 <p>Hermes must record submitted answers so the same human input is not accidentally replayed after a reconnect.</p>
@@ -1191,9 +1199,10 @@ Hermes does not re-append duplicate output chunks when event_id is replayed.</co
 <p>DTT-AI should call the endpoints in this order:</p>
 <pre><code>1. POST /workflows/new-project/larv-skill/session-started
 2. POST /workflows/new-project/larv-skill/{session_id}/output
-3. POST /workflows/new-project/larv-skill/{session_id}/human-answer
-4. Repeat output and human-answer as needed
-5. POST /workflows/new-project/larv-skill/{session_id}/completed</code></pre>
+3. POST /workflows/new-project/larv-skill/{session_id}/prompt-shown
+4. POST /workflows/new-project/larv-skill/{session_id}/human-answer
+5. Repeat output, prompt-shown, and human-answer as needed
+6. POST /workflows/new-project/larv-skill/{session_id}/completed</code></pre>
 <p>If the <code>larv:full</code> skill crashes, is cancelled, or cannot continue, call:</p>
 <pre><code>POST /workflows/new-project/larv-skill/{session_id}/failed</code></pre>
 <p>Hermes returns its own <code>interactive_session.id</code>. Use that value as <code>{session_id}</code> in later calls.</p>
@@ -1289,7 +1298,50 @@ output
   },
   &quot;idempotent_replay&quot;: false
 }</code></pre>
-<h2 id="10-dtt-ai-larv-skill-contract-3-human-answer">3. Human Answer</h2>
+<h2 id="10-dtt-ai-larv-skill-contract-3-prompt-shown">3. Prompt Shown</h2>
+<p>Call this when DTT-AI detects that <code>larv:full</code> is asking the human for input.</p>
+<pre><code>POST /workflows/new-project/larv-skill/{session_id}/prompt-shown
+Content-Type: application/json
+X-Hermes-Token: &lt;shared-token&gt;</code></pre>
+<p>Request:</p>
+<pre><code>{
+  &quot;event_id&quot;: &quot;dtt-session-123-prompt-stack-choice-001&quot;,
+  &quot;prompt_id&quot;: &quot;stack-choice-001&quot;,
+  &quot;prompt&quot;: &quot;Which backend stack should be used?&quot;,
+  &quot;choices&quot;: [&quot;Fastify&quot;, &quot;Laravel&quot;],
+  &quot;default&quot;: &quot;Fastify&quot;,
+  &quot;is_required&quot;: true,
+  &quot;metadata&quot;: {
+    &quot;source&quot;: &quot;larv:full&quot;,
+    &quot;phase&quot;: &quot;stack-selection&quot;
+  }
+}</code></pre>
+<p>Fields:</p>
+<pre><code>event_id
+  Stable DTT-AI event identifier for idempotent retries.
+
+prompt_id
+  DTT-AI prompt identifier. Must be stable per prompt.
+
+prompt
+  Exact prompt text shown to the human.
+
+choices
+  Optional list of selectable answers when DTT-AI can detect them.
+
+default
+  Optional default answer when DTT-AI can detect one.
+
+is_required
+  Whether DTT-AI should block the workflow until a human answer is submitted.
+
+metadata
+  Optional structured context such as source, phase, UI control type, or raw parser details.</code></pre>
+<p>Response state:</p>
+<pre><code>run.state = larv_full_waiting_for_input
+interactive_session.status = waiting_for_input
+interactive_session.last_prompt = prompt</code></pre>
+<h2 id="10-dtt-ai-larv-skill-contract-4-human-answer">4. Human Answer</h2>
 <p>Call this after the human answers a <code>larv:full</code> prompt in DTT-AI.</p>
 <pre><code>POST /workflows/new-project/larv-skill/{session_id}/human-answer
 Content-Type: application/json
@@ -1312,7 +1364,7 @@ answer
 <p>Response state:</p>
 <pre><code>run.state = larv_full_input_received</code></pre>
 <p>Hermes records this answer for audit and replay protection. DTT-AI remains responsible for sending the answer to the actual <code>larv:full</code> skill runtime.</p>
-<h2 id="10-dtt-ai-larv-skill-contract-4-completed">4. Completed</h2>
+<h2 id="10-dtt-ai-larv-skill-contract-5-completed">5. Completed</h2>
 <p>Call this when the <code>larv:full</code> skill finishes and generated artifacts are available.</p>
 <pre><code>POST /workflows/new-project/larv-skill/{session_id}/completed
 Content-Type: application/json
@@ -1338,7 +1390,7 @@ project_dir
 4. create HermesProjectBlueprint
 5. create ProjectContextCandidate</code></pre>
 <p>If <code>project_dir</code> does not exist or is not readable by Hermes Core, Hermes returns <code>400</code> with a validation detail and does not mark the session completed.</p>
-<h2 id="10-dtt-ai-larv-skill-contract-5-failed">5. Failed</h2>
+<h2 id="10-dtt-ai-larv-skill-contract-6-failed">6. Failed</h2>
 <p>Call this when DTT-AI knows the <code>larv:full</code> skill cannot continue.</p>
 <pre><code>POST /workflows/new-project/larv-skill/{session_id}/failed
 Content-Type: application/json
@@ -1367,9 +1419,8 @@ artifact upload endpoint
 repository URL/branch after generation</code></pre>
 <p>The current Hermes implementation expects a readable local <code>project_dir</code>.</p>
 <h2 id="10-dtt-ai-larv-skill-contract-remaining-limitations">Remaining Limitations</h2>
-<p>The current API now supports shared-token auth, idempotency, output sequencing metadata, stream labels, failure reporting, and artifact path validation. Remaining contract gaps:</p>
-<pre><code>structured prompt metadata
-artifact upload endpoint for non-shared filesystems
+<p>The current API now supports shared-token auth, idempotency, output sequencing metadata, stream labels, structured prompt metadata, failure reporting, and artifact path validation. Remaining contract gaps:</p>
+<pre><code>artifact upload endpoint for non-shared filesystems
 repository URL ingestion for generated projects</code></pre>
 <h2 id="10-dtt-ai-larv-skill-contract-minimal-dtt-ai-pseudocode">Minimal DTT-AI Pseudocode</h2>
 <pre><code>import requests
@@ -1402,6 +1453,20 @@ def on_larv_output(text: str):
             &quot;sequence&quot;: sequence,
             &quot;stream&quot;: &quot;stdout&quot;,
             &quot;output&quot;: text,
+        },
+    )
+
+def on_prompt_shown(prompt_id: str, prompt: str, choices: list[str] | None = None):
+    requests.post(
+        f&quot;{HERMES}/workflows/new-project/larv-skill/{session_id}/prompt-shown&quot;,
+        headers=HEADERS,
+        json={
+            &quot;event_id&quot;: f&quot;{dtt_session_id}-prompt-{prompt_id}&quot;,
+            &quot;prompt_id&quot;: prompt_id,
+            &quot;prompt&quot;: prompt,
+            &quot;choices&quot;: choices or [],
+            &quot;is_required&quot;: True,
+            &quot;metadata&quot;: {&quot;source&quot;: &quot;larv:full&quot;},
         },
     )
 

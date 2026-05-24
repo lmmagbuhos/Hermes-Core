@@ -82,8 +82,9 @@ memory.promoted
 ```text
 DTT-AI/agent runtime invokes the larv:full skill.
 DTT-AI displays skill/session output.
+DTT-AI reports structured prompts when larv asks for input.
 DTT-AI captures human answers to larv prompts.
-DTT-AI reports output and answers to Hermes Core.
+DTT-AI reports output, prompts, and answers to Hermes Core.
 Hermes Core records run state, transcript, prompt/answer history, and events.
 DTT-AI reports completion and artifact location.
 Hermes Core ingests artifacts and creates ProjectContextCandidate.
@@ -96,8 +97,10 @@ The reporting endpoints are:
 ```text
 POST /workflows/new-project/larv-skill/session-started
 POST /workflows/new-project/larv-skill/{session_id}/output
+POST /workflows/new-project/larv-skill/{session_id}/prompt-shown
 POST /workflows/new-project/larv-skill/{session_id}/human-answer
 POST /workflows/new-project/larv-skill/{session_id}/completed
+POST /workflows/new-project/larv-skill/{session_id}/failed
 ```
 
 ## Issue Fix Interaction

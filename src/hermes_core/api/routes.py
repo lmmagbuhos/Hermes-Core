@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import APIRouter, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from hermes_core.config import get_settings
 from hermes_core.db import create_session_factory, init_db
@@ -54,6 +54,16 @@ class LarvSkillHumanAnswerRequest(BaseModel):
     event_id: str | None = None
     prompt_id: str
     answer: str
+
+
+class LarvSkillPromptShownRequest(BaseModel):
+    event_id: str | None = None
+    prompt_id: str
+    prompt: str
+    choices: list[str] = Field(default_factory=list)
+    default: str | None = None
+    is_required: bool = True
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class LarvSkillCompletedRequest(BaseModel):
@@ -277,6 +287,36 @@ def record_larv_skill_output(
     _record_idempotency(
         event_id=request.event_id,
         endpoint="larv-skill/output",
+        payload=payload,
+        run_id=result.run.id,
+    )
+    return payload
+
+
+@router.post("/workflows/new-project/larv-skill/{session_id}/prompt-shown")
+def record_larv_skill_prompt_shown(
+    session_id: str,
+    request: LarvSkillPromptShownRequest,
+    x_hermes_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _require_dtt_ai_token(x_hermes_token)
+    if replay := _idempotent_replay(request.event_id):
+        return replay
+    service = _workflow_service()
+    result = service.record_larv_skill_prompt_shown(
+        session_id,
+        prompt_id=request.prompt_id,
+        prompt=request.prompt,
+        choices=request.choices,
+        default=request.default,
+        is_required=request.is_required,
+        metadata=request.metadata,
+    )
+    payload = _workflow_result_payload(result)
+    payload["idempotent_replay"] = False
+    _record_idempotency(
+        event_id=request.event_id,
+        endpoint="larv-skill/prompt-shown",
         payload=payload,
         run_id=result.run.id,
     )

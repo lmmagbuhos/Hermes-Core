@@ -48,6 +48,10 @@ def test_marks_waiting_for_input_and_records_prompt(tmp_path):
         {
             "prompt_id": "prompt_backend_stack",
             "prompt": "Which backend stack should be used?",
+            "choices": [],
+            "default": None,
+            "is_required": True,
+            "metadata": {},
         }
     ]
 

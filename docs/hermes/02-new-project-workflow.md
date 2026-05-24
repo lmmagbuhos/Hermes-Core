@@ -76,6 +76,7 @@ DTT-AI reports these lifecycle events to Hermes Core:
 ```text
 skill session started
 output/transcript chunks
+structured prompts shown
 human answers
 completion
 artifact location

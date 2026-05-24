@@ -221,6 +221,46 @@ class NewProjectWorkflowService:
         )
         return NewProjectWorkflowResult(run=run, interactive_session=interactive_session)
 
+    def record_larv_skill_prompt_shown(
+        self,
+        session_id: str,
+        *,
+        prompt_id: str,
+        prompt: str,
+        choices: list[str] | None = None,
+        default: str | None = None,
+        is_required: bool = True,
+        metadata: dict[str, object] | None = None,
+    ) -> NewProjectWorkflowResult:
+        interactive_session = self.sessions.mark_waiting_for_input(
+            session_id,
+            prompt=prompt,
+            prompt_id=prompt_id,
+            choices=choices,
+            default=default,
+            is_required=is_required,
+            metadata=metadata,
+        )
+        run = self.runs.transition(
+            interactive_session.run_id,
+            "larv_full_waiting_for_input",
+            {"last_prompt": prompt, "last_prompt_id": prompt_id},
+        )
+        self.events.emit(
+            "human.input_required",
+            {
+                "session_id": session_id,
+                "prompt_id": prompt_id,
+                "prompt": prompt,
+                "choices": choices or [],
+                "default": default,
+                "is_required": is_required,
+                "metadata": metadata or {},
+            },
+            run_id=run.id,
+        )
+        return NewProjectWorkflowResult(run=run, interactive_session=interactive_session)
+
     def record_larv_skill_human_answer(
         self,
         session_id: str,

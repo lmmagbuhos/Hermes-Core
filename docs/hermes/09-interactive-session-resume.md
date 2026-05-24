@@ -60,10 +60,11 @@ expired
 2. DTT-AI reports session start to Hermes Core.
 3. Hermes stores an InteractiveSessionRecord with command ["skill:larv:full"].
 4. DTT-AI streams output chunks to Hermes Core.
-5. Human answers prompts in DTT-AI.
-6. DTT-AI reports prompt answers to Hermes Core.
-7. DTT-AI reports completion and artifact location.
-8. Hermes ingests artifacts and creates ProjectContextCandidate.
+5. DTT-AI reports structured prompts when larv asks for input.
+6. Human answers prompts in DTT-AI.
+7. DTT-AI reports prompt answers to Hermes Core.
+8. DTT-AI reports completion and artifact location.
+9. Hermes ingests artifacts and creates ProjectContextCandidate.
 ```
 
 ## Shell Command Flow
@@ -119,18 +120,21 @@ process idle state
 input expected heuristics
 ```
 
-Longer-term, `larv:full` should emit structured prompt events.
+For external `larv:full` skill sessions, DTT-AI reports structured prompt events through Hermes Core.
 
-Example future event:
+Example prompt payload:
 
 ```json
 {
-  "type": "prompt.required",
-  "session_id": "sess_123",
+  "event_id": "dtt-session-123-prompt-project-stack-choice",
   "prompt_id": "project_stack_choice",
-  "question": "Which stack do you want?",
-  "options": ["Laravel", "Fastify", "Next.js"],
-  "input_type": "single_choice"
+  "prompt": "Which stack do you want?",
+  "choices": ["Laravel", "Fastify", "Next.js"],
+  "default": "Fastify",
+  "is_required": true,
+  "metadata": {
+    "input_type": "single_choice"
+  }
 }
 ```
 

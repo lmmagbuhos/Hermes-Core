@@ -64,9 +64,10 @@ DTT-AI should call the endpoints in this order:
 ```text
 1. POST /workflows/new-project/larv-skill/session-started
 2. POST /workflows/new-project/larv-skill/{session_id}/output
-3. POST /workflows/new-project/larv-skill/{session_id}/human-answer
-4. Repeat output and human-answer as needed
-5. POST /workflows/new-project/larv-skill/{session_id}/completed
+3. POST /workflows/new-project/larv-skill/{session_id}/prompt-shown
+4. POST /workflows/new-project/larv-skill/{session_id}/human-answer
+5. Repeat output, prompt-shown, and human-answer as needed
+6. POST /workflows/new-project/larv-skill/{session_id}/completed
 ```
 
 If the `larv:full` skill crashes, is cancelled, or cannot continue, call:
@@ -203,7 +204,67 @@ Response:
 }
 ```
 
-## 3. Human Answer
+## 3. Prompt Shown
+
+Call this when DTT-AI detects that `larv:full` is asking the human for input.
+
+```http
+POST /workflows/new-project/larv-skill/{session_id}/prompt-shown
+Content-Type: application/json
+X-Hermes-Token: <shared-token>
+```
+
+Request:
+
+```json
+{
+  "event_id": "dtt-session-123-prompt-stack-choice-001",
+  "prompt_id": "stack-choice-001",
+  "prompt": "Which backend stack should be used?",
+  "choices": ["Fastify", "Laravel"],
+  "default": "Fastify",
+  "is_required": true,
+  "metadata": {
+    "source": "larv:full",
+    "phase": "stack-selection"
+  }
+}
+```
+
+Fields:
+
+```text
+event_id
+  Stable DTT-AI event identifier for idempotent retries.
+
+prompt_id
+  DTT-AI prompt identifier. Must be stable per prompt.
+
+prompt
+  Exact prompt text shown to the human.
+
+choices
+  Optional list of selectable answers when DTT-AI can detect them.
+
+default
+  Optional default answer when DTT-AI can detect one.
+
+is_required
+  Whether DTT-AI should block the workflow until a human answer is submitted.
+
+metadata
+  Optional structured context such as source, phase, UI control type, or raw parser details.
+```
+
+Response state:
+
+```text
+run.state = larv_full_waiting_for_input
+interactive_session.status = waiting_for_input
+interactive_session.last_prompt = prompt
+```
+
+## 4. Human Answer
 
 Call this after the human answers a `larv:full` prompt in DTT-AI.
 
@@ -244,7 +305,7 @@ run.state = larv_full_input_received
 
 Hermes records this answer for audit and replay protection. DTT-AI remains responsible for sending the answer to the actual `larv:full` skill runtime.
 
-## 4. Completed
+## 5. Completed
 
 Call this when the `larv:full` skill finishes and generated artifacts are available.
 
@@ -292,7 +353,7 @@ Hermes will:
 
 If `project_dir` does not exist or is not readable by Hermes Core, Hermes returns `400` with a validation detail and does not mark the session completed.
 
-## 5. Failed
+## 6. Failed
 
 Call this when DTT-AI knows the `larv:full` skill cannot continue.
 
@@ -347,10 +408,9 @@ The current Hermes implementation expects a readable local `project_dir`.
 
 ## Remaining Limitations
 
-The current API now supports shared-token auth, idempotency, output sequencing metadata, stream labels, failure reporting, and artifact path validation. Remaining contract gaps:
+The current API now supports shared-token auth, idempotency, output sequencing metadata, stream labels, structured prompt metadata, failure reporting, and artifact path validation. Remaining contract gaps:
 
 ```text
-structured prompt metadata
 artifact upload endpoint for non-shared filesystems
 repository URL ingestion for generated projects
 ```
@@ -388,6 +448,20 @@ def on_larv_output(text: str):
             "sequence": sequence,
             "stream": "stdout",
             "output": text,
+        },
+    )
+
+def on_prompt_shown(prompt_id: str, prompt: str, choices: list[str] | None = None):
+    requests.post(
+        f"{HERMES}/workflows/new-project/larv-skill/{session_id}/prompt-shown",
+        headers=HEADERS,
+        json={
+            "event_id": f"{dtt_session_id}-prompt-{prompt_id}",
+            "prompt_id": prompt_id,
+            "prompt": prompt,
+            "choices": choices or [],
+            "is_required": True,
+            "metadata": {"source": "larv:full"},
         },
     )
 
