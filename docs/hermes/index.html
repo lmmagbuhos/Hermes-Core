@@ -251,7 +251,7 @@
         <a href="#10-dtt-ai-larv-skill-contract">DTT-AI Larv Skill Contract</a>
         <a href="#11-dtt-ai-handoff">DTT-AI Handoff</a>
       </nav>
-      <p class="meta">Generated 2026-05-24T14:46:46.268Z from docs/hermes/*.md.</p>
+      <p class="meta">Generated 2026-05-24T15:27:14.887Z from docs/hermes/*.md.</p>
     </aside>
     <main>
       <section class="hero" aria-labelledby="page-title">
@@ -1537,6 +1537,48 @@ POST /workflows/new-project/larv-skill/{session_id}/human-answer
 POST /workflows/new-project/larv-skill/{session_id}/completed
 POST /workflows/new-project/larv-skill/{session_id}/failed</code></pre>
 <p>The full request and response contract is in <code>10-dtt-ai-larv-skill-contract.md</code>.</p>
+<h2 id="11-dtt-ai-handoff-python-adapter">Python Adapter</h2>
+<p>Hermes Core includes a small Python adapter that DTT-AI can copy, vendor, or import when both projects share the same Python environment:</p>
+<pre><code>src/hermes_core/integrations/dtt_ai/client.py</code></pre>
+<p>The adapter exposes:</p>
+<pre><code>from hermes_core.integrations.dtt_ai import DttAiEventIdFactory, DttAiHermesClient
+
+event_ids = DttAiEventIdFactory(&quot;dtt-session-123&quot;)
+
+with DttAiHermesClient(
+    base_url=&quot;http://127.0.0.1:8000&quot;,
+    token=&quot;&lt;shared-token&gt;&quot;,
+    event_ids=event_ids,
+) as hermes:
+    session = hermes.start_larv_skill_session(
+        project_name=&quot;AeroTrack&quot;,
+        external_session_id=&quot;dtt-session-123&quot;,
+        cwd=&quot;/home/dtt-ai/workspaces/AeroTrack&quot;,
+    )
+    hermes.record_output(
+        session_id=session.id,
+        sequence=1,
+        stream=&quot;stdout&quot;,
+        output=&quot;Which backend stack should be used?&quot;,
+    )
+    hermes.record_prompt_shown(
+        session_id=session.id,
+        prompt_id=&quot;stack-choice-001&quot;,
+        prompt=&quot;Which backend stack should be used?&quot;,
+        choices=[&quot;Fastify&quot;, &quot;Laravel&quot;],
+        default=&quot;Fastify&quot;,
+        metadata={&quot;source&quot;: &quot;larv:full&quot;},
+    )
+    hermes.record_human_answer(
+        session_id=session.id,
+        prompt_id=&quot;stack-choice-001&quot;,
+        answer=&quot;Fastify&quot;,
+    )
+    hermes.complete_session(
+        session_id=session.id,
+        project_dir=&quot;/home/dtt-ai/workspaces/AeroTrack&quot;,
+    )</code></pre>
+<p>The client raises <code>httpx.HTTPStatusError</code> for Hermes error responses. DTT-AI should catch that exception, log the response body, and show the failure in the operator UI.</p>
 <h2 id="11-dtt-ai-handoff-idempotency-rules">Idempotency Rules</h2>
 <p>Every DTT-AI event should include <code>event_id</code>.</p>
 <p>Use stable event IDs:</p>

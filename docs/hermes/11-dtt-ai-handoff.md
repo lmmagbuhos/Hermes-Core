@@ -61,6 +61,58 @@ POST /workflows/new-project/larv-skill/{session_id}/failed
 
 The full request and response contract is in `10-dtt-ai-larv-skill-contract.md`.
 
+## Python Adapter
+
+Hermes Core includes a small Python adapter that DTT-AI can copy, vendor, or import when both projects share the same Python environment:
+
+```text
+src/hermes_core/integrations/dtt_ai/client.py
+```
+
+The adapter exposes:
+
+```python
+from hermes_core.integrations.dtt_ai import DttAiEventIdFactory, DttAiHermesClient
+
+event_ids = DttAiEventIdFactory("dtt-session-123")
+
+with DttAiHermesClient(
+    base_url="http://127.0.0.1:8000",
+    token="<shared-token>",
+    event_ids=event_ids,
+) as hermes:
+    session = hermes.start_larv_skill_session(
+        project_name="AeroTrack",
+        external_session_id="dtt-session-123",
+        cwd="/home/dtt-ai/workspaces/AeroTrack",
+    )
+    hermes.record_output(
+        session_id=session.id,
+        sequence=1,
+        stream="stdout",
+        output="Which backend stack should be used?",
+    )
+    hermes.record_prompt_shown(
+        session_id=session.id,
+        prompt_id="stack-choice-001",
+        prompt="Which backend stack should be used?",
+        choices=["Fastify", "Laravel"],
+        default="Fastify",
+        metadata={"source": "larv:full"},
+    )
+    hermes.record_human_answer(
+        session_id=session.id,
+        prompt_id="stack-choice-001",
+        answer="Fastify",
+    )
+    hermes.complete_session(
+        session_id=session.id,
+        project_dir="/home/dtt-ai/workspaces/AeroTrack",
+    )
+```
+
+The client raises `httpx.HTTPStatusError` for Hermes error responses. DTT-AI should catch that exception, log the response body, and show the failure in the operator UI.
+
 ## Idempotency Rules
 
 Every DTT-AI event should include `event_id`.

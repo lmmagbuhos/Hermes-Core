@@ -3,6 +3,8 @@ from pathlib import Path
 
 import httpx
 
+from hermes_core.integrations.dtt_ai import DttAiEventIdFactory, DttAiHermesClient
+
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "tools" / "dtt_ai_larv_skill_smoke.py"
 SPEC = importlib.util.spec_from_file_location("dtt_ai_larv_skill_smoke", SCRIPT_PATH)
@@ -23,7 +25,7 @@ def test_reference_client_completed_flow_contract(tmp_path):
                 200,
                 json={
                     "run": {"state": "larv_full_session_started"},
-                    "interactive_session": {"id": "sess_complete"},
+                    "interactive_session": {"id": "sess_complete", "run_id": 1},
                 },
             )
         if request.url.path.endswith("/prompt-shown"):
@@ -31,7 +33,7 @@ def test_reference_client_completed_flow_contract(tmp_path):
                 200,
                 json={
                     "run": {"state": "larv_full_waiting_for_input"},
-                    "interactive_session": {"id": "sess_complete"},
+                    "interactive_session": {"id": "sess_complete", "run_id": 1},
                 },
             )
         if request.url.path.endswith("/human-answer"):
@@ -39,7 +41,7 @@ def test_reference_client_completed_flow_contract(tmp_path):
                 200,
                 json={
                     "run": {"state": "larv_full_input_received"},
-                    "interactive_session": {"id": "sess_complete"},
+                    "interactive_session": {"id": "sess_complete", "run_id": 1},
                 },
             )
         if request.url.path.endswith("/completed"):
@@ -47,27 +49,32 @@ def test_reference_client_completed_flow_contract(tmp_path):
                 200,
                 json={
                     "run": {"state": "project_context_candidate_created"},
-                    "interactive_session": {"id": "sess_complete"},
+                    "interactive_session": {"id": "sess_complete", "run_id": 1},
                 },
             )
         return httpx.Response(
             200,
             json={
                 "run": {"state": "larv_full_session_started"},
-                "interactive_session": {"id": "sess_complete"},
+                "interactive_session": {"id": "sess_complete", "run_id": 1},
             },
         )
 
-    client = httpx.Client(
+    http_client = httpx.Client(
         base_url="http://testserver",
         transport=httpx.MockTransport(handler),
+    )
+    client = DttAiHermesClient(
+        base_url="http://unused",
+        event_ids=DttAiEventIdFactory("event"),
+        http_client=http_client,
     )
     project_dir = tmp_path / "AeroTrack"
     smoke.ensure_minimal_artifacts(project_dir)
 
     summary = smoke.run_completed_flow(
         client=client,
-        event_prefix="event",
+        event_ids=DttAiEventIdFactory("event"),
         project_name="AeroTrack",
         external_session_id="dtt-session",
         project_dir=str(project_dir),
@@ -98,25 +105,34 @@ def test_reference_client_failed_flow_contract():
                 200,
                 json={
                     "run": {"state": "larv_full_session_started"},
-                    "interactive_session": {"id": "sess_failed"},
+                    "interactive_session": {"id": "sess_failed", "run_id": 1},
                 },
             )
         return httpx.Response(
             200,
             json={
                 "run": {"state": "failed"},
-                "interactive_session": {"id": "sess_failed", "status": "recovery_required"},
+                "interactive_session": {
+                    "id": "sess_failed",
+                    "run_id": 1,
+                    "status": "recovery_required",
+                },
             },
         )
 
-    client = httpx.Client(
+    http_client = httpx.Client(
         base_url="http://testserver",
         transport=httpx.MockTransport(handler),
+    )
+    client = DttAiHermesClient(
+        base_url="http://unused",
+        event_ids=DttAiEventIdFactory("event"),
+        http_client=http_client,
     )
 
     summary = smoke.run_failed_flow(
         client=client,
-        event_prefix="event",
+        event_ids=DttAiEventIdFactory("event"),
         project_name="AeroTrack",
         cwd="/tmp/AeroTrack",
         external_session_id="dtt-session",

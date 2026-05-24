@@ -6,27 +6,36 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-import httpx
+REPO_SRC = Path(__file__).resolve().parents[1] / "src"
+if REPO_SRC.exists():
+    sys.path.insert(0, str(REPO_SRC))
+
+from hermes_core.integrations.dtt_ai import DttAiEventIdFactory, DttAiHermesClient  # noqa: E402
 
 
 def main() -> None:
     args = parse_args()
     token = args.token if args.token is not None else os.getenv("HERMES_DTT_AI_SHARED_TOKEN", "")
-    headers = {"X-Hermes-Token": token} if token else {}
     event_prefix = args.event_prefix or f"dtt-smoke-{uuid4().hex}"
 
-    with httpx.Client(base_url=args.hermes_url, headers=headers, timeout=args.timeout) as client:
+    with DttAiHermesClient(
+        base_url=args.hermes_url,
+        token=token,
+        timeout=args.timeout,
+        event_ids=DttAiEventIdFactory(event_prefix),
+    ) as client:
         if args.mode in {"complete", "both"}:
             project_dir_context = project_dir_for_smoke(args.project_dir, args.project_name)
             with project_dir_context as project_dir:
                 completed_summary = run_completed_flow(
                     client=client,
-                    event_prefix=f"{event_prefix}-complete",
+                    event_ids=DttAiEventIdFactory(f"{event_prefix}-complete"),
                     project_name=args.project_name,
                     external_session_id=f"{event_prefix}-complete-session",
                     project_dir=project_dir,
@@ -36,7 +45,7 @@ def main() -> None:
         if args.mode in {"failed", "both"}:
             failed_summary = run_failed_flow(
                 client=client,
-                event_prefix=f"{event_prefix}-failed",
+                event_ids=DttAiEventIdFactory(f"{event_prefix}-failed"),
                 project_name=args.project_name,
                 cwd=str(Path(args.project_dir).resolve()) if args.project_dir else os.getcwd(),
                 external_session_id=f"{event_prefix}-failed-session",
@@ -108,66 +117,42 @@ def ensure_minimal_artifacts(project_dir: Path) -> None:
 
 def run_completed_flow(
     *,
-    client: httpx.Client,
-    event_prefix: str,
+    client: DttAiHermesClient,
+    event_ids: DttAiEventIdFactory,
     project_name: str,
     external_session_id: str,
     project_dir: str,
 ) -> dict[str, Any]:
-    started = post(
-        client,
-        "/workflows/new-project/larv-skill/session-started",
-        {
-            "event_id": f"{event_prefix}-started",
-            "project_name": project_name,
-            "external_session_id": external_session_id,
-            "cwd": project_dir,
-        },
+    client.event_ids = event_ids
+    session = client.start_larv_skill_session(
+        project_name=project_name,
+        external_session_id=external_session_id,
+        cwd=project_dir,
     )
-    session_id = started["interactive_session"]["id"]
-    post(
-        client,
-        f"/workflows/new-project/larv-skill/{session_id}/output",
-        {
-            "event_id": f"{event_prefix}-output-000001",
-            "sequence": 1,
-            "stream": "stdout",
-            "output": "Which backend stack should be used?",
-        },
+    client.record_output(
+        session_id=session.id,
+        sequence=1,
+        stream="stdout",
+        output="Which backend stack should be used?",
     )
-    prompt = post(
-        client,
-        f"/workflows/new-project/larv-skill/{session_id}/prompt-shown",
-        {
-            "event_id": f"{event_prefix}-prompt-stack-choice-001",
-            "prompt_id": "stack-choice-001",
-            "prompt": "Which backend stack should be used?",
-            "choices": ["Fastify", "Laravel"],
-            "default": "Fastify",
-            "is_required": True,
-            "metadata": {"source": "larv:full", "phase": "stack-selection"},
-        },
+    prompt = client.record_prompt_shown(
+        session_id=session.id,
+        prompt_id="stack-choice-001",
+        prompt="Which backend stack should be used?",
+        choices=["Fastify", "Laravel"],
+        default="Fastify",
+        is_required=True,
+        metadata={"source": "larv:full", "phase": "stack-selection"},
     )
-    answer = post(
-        client,
-        f"/workflows/new-project/larv-skill/{session_id}/human-answer",
-        {
-            "event_id": f"{event_prefix}-answer-stack-choice-001",
-            "prompt_id": "stack-choice-001",
-            "answer": "Fastify",
-        },
+    answer = client.record_human_answer(
+        session_id=session.id,
+        prompt_id="stack-choice-001",
+        answer="Fastify",
     )
-    completed = post(
-        client,
-        f"/workflows/new-project/larv-skill/{session_id}/completed",
-        {
-            "event_id": f"{event_prefix}-completed",
-            "project_dir": project_dir,
-        },
-    )
+    completed = client.complete_session(session_id=session.id, project_dir=project_dir)
     return {
         "flow": "complete",
-        "session_id": session_id,
+        "session_id": session.id,
         "prompt_state": prompt["run"]["state"],
         "answer_state": answer["run"]["state"],
         "final_state": completed["run"]["state"],
@@ -177,43 +162,28 @@ def run_completed_flow(
 
 def run_failed_flow(
     *,
-    client: httpx.Client,
-    event_prefix: str,
+    client: DttAiHermesClient,
+    event_ids: DttAiEventIdFactory,
     project_name: str,
     cwd: str,
     external_session_id: str,
 ) -> dict[str, Any]:
-    started = post(
-        client,
-        "/workflows/new-project/larv-skill/session-started",
-        {
-            "event_id": f"{event_prefix}-started",
-            "project_name": project_name,
-            "external_session_id": external_session_id,
-            "cwd": cwd,
-        },
+    client.event_ids = event_ids
+    session = client.start_larv_skill_session(
+        project_name=project_name,
+        external_session_id=external_session_id,
+        cwd=cwd,
     )
-    session_id = started["interactive_session"]["id"]
-    failed = post(
-        client,
-        f"/workflows/new-project/larv-skill/{session_id}/failed",
-        {
-            "event_id": f"{event_prefix}-failed",
-            "reason": "DTT-AI smoke test simulated larv:full failure",
-        },
+    failed = client.fail_session(
+        session_id=session.id,
+        reason="DTT-AI smoke test simulated larv:full failure",
     )
     return {
         "flow": "failed",
-        "session_id": session_id,
+        "session_id": session.id,
         "final_state": failed["run"]["state"],
         "session_status": failed["interactive_session"]["status"],
     }
-
-
-def post(client: httpx.Client, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-    response = client.post(path, json=payload)
-    response.raise_for_status()
-    return response.json()
 
 
 if __name__ == "__main__":
