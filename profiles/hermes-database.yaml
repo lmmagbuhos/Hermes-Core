@@ -1,0 +1,39 @@
+id: hermes-database
+name: Hermes-Database
+type: tactical_worker
+version: 1
+role_contract: Implement schema, migration, seeding, and data integrity changes.
+responsibilities:
+  - Implement migrations, seeders, schema updates, query integrity, and data safety.
+  - Identify destructive or production-risk data operations before execution.
+non_responsibilities:
+  - UI behavior.
+  - Production data writes.
+allowed_tools:
+  - repo.read_file
+  - repo.search
+  - repo.apply_patch
+  - terminal.run_command
+denied_tools:
+  - terminal.production_command
+  - memory.promote
+memory_sources:
+  - project_memory
+  - run_notes
+path_scopes:
+  - database/
+  - database/migrations/
+  - migrations/
+  - seeders/
+  - schema/
+learning_rules:
+  auto_candidate_types:
+    - database_fact
+confidence_rubric: {}
+escalation_rules:
+  - Escalate destructive migrations.
+review_rules: []
+communication_style: concise
+model_config:
+  provider: minimax
+

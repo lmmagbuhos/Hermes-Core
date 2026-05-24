@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hermes Core Documentation</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f5ef;
+      --panel: #ffffff;
+      --ink: #181a1f;
+      --muted: #626975;
+      --line: #d8d3c8;
+      --accent: #1d6f78;
+      --accent-ink: #0e3e45;
+      --code-bg: #101419;
+      --code-ink: #edf2f7;
+      --warn: #a45214;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      border-right: 1px solid var(--line);
+      background: #efebe1;
+      padding: 24px 18px;
+    }
+
+    .brand {
+      padding: 0 8px 18px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 18px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    nav a {
+      display: block;
+      color: var(--accent-ink);
+      text-decoration: none;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    nav a:hover,
+    nav a:focus {
+      background: rgba(29, 111, 120, 0.1);
+      outline: none;
+    }
+
+    main {
+      padding: 40px min(6vw, 72px) 80px;
+    }
+
+    .hero {
+      max-width: 980px;
+      margin: 0 0 36px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 28px;
+    }
+
+    .hero .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .hero h2 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 68px);
+      line-height: 0.95;
+      letter-spacing: 0;
+      max-width: 900px;
+    }
+
+    .hero p {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 17px;
+      margin: 18px 0 0;
+    }
+
+    .doc {
+      max-width: 980px;
+      padding: 28px 0 36px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .doc:first-of-type {
+      padding-top: 0;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .doc h1 {
+      font-size: 34px;
+      margin: 0 0 18px;
+    }
+
+    .doc h2 {
+      font-size: 24px;
+      margin: 30px 0 12px;
+    }
+
+    .doc h3 {
+      font-size: 19px;
+      margin: 24px 0 10px;
+    }
+
+    .doc h4 {
+      font-size: 16px;
+      margin: 20px 0 8px;
+    }
+
+    p,
+    li {
+      font-size: 15.5px;
+    }
+
+    p {
+      margin: 12px 0;
+    }
+
+    ul {
+      margin: 10px 0 16px;
+      padding-left: 22px;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+
+    p code,
+    li code {
+      background: rgba(24, 26, 31, 0.08);
+      border: 1px solid rgba(24, 26, 31, 0.08);
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+
+    pre {
+      margin: 14px 0 20px;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      padding: 16px;
+      border-radius: 8px;
+      overflow: auto;
+      border: 1px solid #222b35;
+    }
+
+    pre code {
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre;
+    }
+
+    .meta {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 860px) {
+      .shell {
+        display: block;
+      }
+
+      aside {
+        position: relative;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      nav {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 4px;
+      }
+
+      main {
+        padding: 28px 18px 64px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <h1>Hermes Core</h1>
+        <p>Rendered documentation from Markdown sources.</p>
+      </div>
+      <nav aria-label="Documentation sections">
+        <a href="#00-overview">Project Hermes Overview</a>
+        <a href="#01-core-components">Core Components</a>
+        <a href="#02-new-project-workflow">New Project Creation Workflow</a>
+        <a href="#03-issue-fix-workflow">Issue Fix Workflow</a>
+        <a href="#04-agent-profiles">Agent Profiles</a>
+        <a href="#05-self-learning-memory">Self-Learning Memory</a>
+        <a href="#06-security-permissions">Security and Permissions</a>
+        <a href="#07-dtt-ai-integration-contract">DTT-AI Integration Contract</a>
+        <a href="#08-first-proof-of-concept">First Proof of Concept</a>
+        <a href="#09-interactive-session-resume">Resumable Interactive Sessions</a>
+      </nav>
+      <p class="meta">Generated 2026-05-24T03:46:25.999Z from docs/hermes/*.md.</p>
+    </aside>
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">Project Hermes</p>
+        <h2 id="page-title">No-touch maintenance architecture</h2>
+        <p>A browsable HTML edition of the Hermes core design docs, generated from the Markdown files in this folder.</p>
+      </section>
+      <article class="doc" id="00-overview" data-source="00-overview.md">
+<h1 id="00-overview-project-hermes-overview">Project Hermes Overview</h1>
+<p>Project Hermes is a no-touch software maintenance and project initialization system. Its goal is to automate routine code maintenance, bug fixing, refactoring, validation, and new project setup while keeping humans in high-level approval and interactive-input roles.</p>
+<p>Hermes is not the DTT-AI website and not merely an SSH terminal wrapper. Hermes is the AI operating layer behind the work.</p>
+<h2 id="00-overview-core-boundary">Core Boundary</h2>
+<pre><code>DTT-AI
+  Human-facing control plane.
+  Displays live terminal sessions, workflow state, bot activity, reports, approvals,
+  sandbox URLs, and interactive prompts.
+
+hermes-core
+  AI orchestration and memory layer.
+  Owns agent profiles, workflow state, confidence scoring, policy checks,
+  self-learning records, reports, and execution decisions.
+
+hermes-runner
+  Execution layer.
+  Performs controlled file/repo operations, command execution, tests, sandbox
+  startup, and interactive terminal sessions.</code></pre>
+<h2 id="00-overview-first-version-principle">First Version Principle</h2>
+<p>The first version must not be a fake MVP. It must prove real vertical workflows:</p>
+<pre><code>1. Create one real project through larv:full.
+2. Fix one real issue in an existing project.</code></pre>
+<p>Parallel tactical workers are deferred, but worker identities are not. Hermes should use specialized tactical profiles from day one, executed sequentially at first:</p>
+<pre><code>Hermes-Frontend
+Hermes-Backend
+Hermes-Database
+Hermes-QA</code></pre>
+<h2 id="00-overview-core-agent-roles">Core Agent Roles</h2>
+<pre><code>Hermes-Triage
+  Normalizes requests, extracts repositories/projects, defines acceptance
+  criteria, and rejects ambiguity.
+
+Hermes-Manager
+  Enforces security, compliance, institutional standards, workflow policy,
+  token/run anomaly checks, and final governance gates.
+
+Hermes-ProjectManager
+  Orchestrates per-ticket or per-project workflows, creates worker plans,
+  coordinates tactical agents, and participates in confidence debate.
+
+Hermes-{projectName}
+  Permanent project expert created only after a project is completed and
+  validated. Acts as Solo Maintainer for high-confidence fixes or Context
+  Oracle for complex fixes.
+
+Hermes-Frontend
+  Handles frontend implementation within scoped permissions.
+
+Hermes-Backend
+  Handles backend implementation within scoped permissions.
+
+Hermes-Database
+  Handles migrations, schema, seeders, data integrity, and database concerns.
+
+Hermes-QA
+  Runs validation, checks acceptance criteria, verifies sandbox behavior, and
+  reports failures.</code></pre>
+<h2 id="00-overview-confidence-gate">Confidence Gate</h2>
+<p>For maintenance work, Hermes uses Multi-Agent Debate between Hermes-ProjectManager and Hermes-{projectName}.</p>
+<pre><code>C_Final = min(C_PM, C_Project)</code></pre>
+<p>If <code>C_Final &gt;= 90</code>, Hermes-{projectName} may use Solo Maintainer Mode.</p>
+<p>If <code>C_Final &lt; 90</code>, Hermes-ProjectManager controls the Assembly Line and Hermes-{projectName} acts as Context Oracle, Technical Advisor, Legacy Guardrail, and final diff reviewer.</p>
+<h2 id="00-overview-self-learning-principle">Self-Learning Principle</h2>
+<p>Hermes should learn continuously but promote durable memory carefully.</p>
+<pre><code>Hermes may observe continuously.
+Hermes may propose learnings automatically.
+Hermes promotes durable memory only through scoped evidence rules.</code></pre>
+<p>Hermes can learn facts automatically when evidence is strong. It can propose broader project patterns. It cannot autonomously expand its own authority, weaken policy, skip approval gates, or rewrite governance rules.</p>
+</article>
+      <article class="doc" id="01-core-components" data-source="01-core-components.md">
+<h1 id="01-core-components-core-components">Core Components</h1>
+<p><code>hermes-core</code> should be built as a workflow-first, profile-backed, sequential multi-agent runtime.</p>
+<h2 id="01-core-components-agent-profile-registry">Agent Profile Registry</h2>
+<p>Stores structured Hermes bot identities:</p>
+<pre><code>Hermes-Triage
+Hermes-Manager
+Hermes-ProjectManager
+Hermes-{projectName}
+Hermes-Frontend
+Hermes-Backend
+Hermes-Database
+Hermes-QA</code></pre>
+<p>Profiles define:</p>
+<pre><code>identity
+role contract
+responsibilities
+non-responsibilities
+permissions
+allowed tools
+denied tools
+memory access
+confidence rubric
+escalation rules
+review authority
+learning authority
+runtime model config
+profile version</code></pre>
+<h2 id="01-core-components-runtime-prompt-compiler">Runtime Prompt Compiler</h2>
+<p>Builds agent invocation context from:</p>
+<pre><code>agent profile
+workflow state
+ticket/request data
+project memory
+relevant files/artifacts
+allowed tools
+current constraints</code></pre>
+<p>The profile is the source of truth. Runtime prompts are generated from profiles and current context.</p>
+<h2 id="01-core-components-run-state-engine">Run-State Engine</h2>
+<p>Owns workflow progression for:</p>
+<pre><code>new_project_creation
+issue_fix</code></pre>
+<p>It records:</p>
+<pre><code>state transitions
+agent decisions
+confidence scores
+tool calls
+terminal sessions
+test results
+reports
+learning candidates
+human approval checkpoints</code></pre>
+<p>The first implementation should use a simple explicit run-state model, not a general-purpose workflow engine.</p>
+<h2 id="01-core-components-execution-adapter">Execution Adapter</h2>
+<p>The controlled interface between Hermes reasoning and real work.</p>
+<p>Capabilities include:</p>
+<pre><code>repo.read_file
+repo.search
+repo.apply_patch
+repo.diff
+repo.status
+repo.commit
+terminal.run_command
+terminal.start_interactive
+terminal.write_stdin
+sandbox.start
+test.run</code></pre>
+<p>Structured tools should be used for file intelligence and precise edits. Terminal sessions should be used for runtime execution, test commands, scaffolding, and interactive CLIs such as <code>larv:full</code>.</p>
+<h2 id="01-core-components-memory-system">Memory System</h2>
+<p>Stores:</p>
+<pre><code>run notes
+candidate learnings
+promoted project memory
+global policy memory
+agent-specific calibration records</code></pre>
+<p>Memory should use structured records first, with vector/search retrieval added later.</p>
+<h2 id="01-core-components-policy-and-permission-layer">Policy and Permission Layer</h2>
+<p>Checks whether an agent can perform an action based on:</p>
+<pre><code>agent role
+workflow
+file scope
+command risk
+project risk
+approval state
+environment</code></pre>
+<p>Policy returns:</p>
+<pre><code>allowed
+denied
+needs_escalation
+needs_human_approval
+needs_manager_approval</code></pre>
+<h2 id="01-core-components-reporting-and-review-layer">Reporting and Review Layer</h2>
+<p>Produces human-readable reports, especially before PR/push.</p>
+<p>Issue-fix reports must include:</p>
+<pre><code>summary
+files changed
+tests run
+sandbox URL
+risks
+unresolved items
+recommended PR action</code></pre>
+<h2 id="01-core-components-event-log">Event Log</h2>
+<p>Every important action emits an event. DTT-AI will later consume these events.</p>
+<p>Examples:</p>
+<pre><code>workflow.state_changed
+agent.started
+agent.completed
+mad.final_score_calculated
+terminal.stdout
+terminal.prompt_detected
+human.input_required
+test.completed
+report.ready
+learning.candidate_created</code></pre>
+</article>
+      <article class="doc" id="02-new-project-workflow" data-source="02-new-project-workflow.md">
+<h1 id="02-new-project-workflow-new-project-creation-workflow">New Project Creation Workflow</h1>
+<p>For new projects, <code>larv:full</code> is the interactive discovery and scaffolding pipeline, not the whole builder.</p>
+<h2 id="02-new-project-workflow-workflow">Workflow</h2>
+<pre><code>1. Request received
+2. Hermes-Triage normalization
+3. Hermes-Manager policy check
+4. Hermes-ProjectManager starts larv:full
+5. Human interacts with larv:full
+6. Larv artifact ingestion
+7. ProjectContextCandidate created
+8. ProjectManager creates worker plan
+9. Tactical workers execute sequentially as needed
+10. Hermes-QA validates
+11. Hermes-Manager final review
+12. Permanent Hermes-{projectName} created
+13. Learning candidates created
+14. Completion report produced</code></pre>
+<h2 id="02-new-project-workflow-request-received">Request Received</h2>
+<p>A human submits a request such as:</p>
+<pre><code>Create AeroTrack with Fastify and Next.js.</code></pre>
+<h2 id="02-new-project-workflow-hermes-triage-normalization">Hermes-Triage Normalization</h2>
+<p>Triage extracts:</p>
+<pre><code>project name
+intended stack
+unclear requirements
+initial acceptance criteria
+repo topology preference</code></pre>
+<p>If the request is too vague, Triage rejects it or asks for clarification.</p>
+<h2 id="02-new-project-workflow-hermes-manager-policy-check">Hermes-Manager Policy Check</h2>
+<p>Manager validates:</p>
+<pre><code>allowed stack
+required institutional defaults
+security requirements
+standard auth/config expectations
+forbidden technologies or risky choices</code></pre>
+<h2 id="02-new-project-workflow-larv-full-execution">larv:full Execution</h2>
+<p>Hermes-ProjectManager starts <code>larv:full</code> through the execution adapter.</p>
+<p><code>larv:full</code> asks project-shaping questions. DTT-AI later displays the terminal session and lets the human answer prompts.</p>
+<p>Hermes stores:</p>
+<pre><code>terminal transcript
+prompt/answer history
+generated files
+generated docs
+warnings and errors</code></pre>
+<h2 id="02-new-project-workflow-artifact-ingestion">Artifact Ingestion</h2>
+<p>After <code>larv:full</code> completes, Hermes reads:</p>
+<pre><code>generated docs
+handoff files
+architecture notes
+implementation slices
+generated code
+terminal transcript</code></pre>
+<p>Hermes produces:</p>
+<pre><code>HermesProjectBlueprint</code></pre>
+<p>The blueprint contains:</p>
+<pre><code>project_name
+repo_topology
+frontend_stack
+backend_stack
+required_packages
+domain_summary
+architecture_decisions
+implementation_slices
+test_commands
+sandbox_commands
+unresolved_questions
+risk_flags
+worker_task_queue</code></pre>
+<h2 id="02-new-project-workflow-projectcontextcandidate">ProjectContextCandidate</h2>
+<p>Hermes creates a temporary project context during creation.</p>
+<p>This candidate may contain uncertainty and messy creation history. It is not the permanent self-learning project agent.</p>
+<h2 id="02-new-project-workflow-sequential-tactical-worker-execution">Sequential Tactical Worker Execution</h2>
+<p>Hermes-ProjectManager converts the blueprint into sequential worker tasks.</p>
+<p>Workers run only when relevant:</p>
+<pre><code>Hermes-Backend
+  Backend code, APIs, services, auth usage, backend tests.
+
+Hermes-Frontend
+  UI routes, components, client state, frontend API integration.
+
+Hermes-Database
+  Migrations, seeders, schema, data integrity.
+
+Hermes-QA
+  Tests, lint, builds, sandbox checks, acceptance criteria.</code></pre>
+<p>The first version defers parallelism but keeps specialization.</p>
+<h2 id="02-new-project-workflow-permanent-project-agent-creation">Permanent Project Agent Creation</h2>
+<p>Permanent <code>Hermes-{projectName}</code> is created only after the project is completed and validated.</p>
+<p>It receives distilled memory:</p>
+<pre><code>validated architecture
+repo layout
+stack
+commands
+known constraints
+accepted project decisions
+initial patch/build history</code></pre>
+<p>Raw creation transcripts remain archived but are not loaded by default.</p>
+</article>
+      <article class="doc" id="03-issue-fix-workflow" data-source="03-issue-fix-workflow.md">
+<h1 id="03-issue-fix-workflow-issue-fix-workflow">Issue Fix Workflow</h1>
+<p>For issue fixing, Hermes uses confidence debate to decide whether Hermes-{projectName} can fix alone or whether the full assembly line is required.</p>
+<h2 id="03-issue-fix-workflow-workflow">Workflow</h2>
+<pre><code>1. Ticket received
+2. Hermes-Triage normalization
+3. Project agent lookup
+4. MAD confidence debate
+5. Execution topology decision
+6. Implementation
+7. Hermes-QA verification
+8. Hermes-{projectName} diff review
+9. Hermes-Manager audit
+10. Human checkpoint before PR/push
+11. Learning candidates created
+12. Workflow completed</code></pre>
+<h2 id="03-issue-fix-workflow-triage">Triage</h2>
+<p>Hermes-Triage extracts:</p>
+<pre><code>repository/project
+issue summary
+reproduction details
+expected behavior
+actual behavior
+acceptance criteria
+ambiguity flags
+required human clarifications</code></pre>
+<p>If the ticket is too ambiguous, Triage rejects or asks for clarification.</p>
+<h2 id="03-issue-fix-workflow-project-agent-lookup">Project Agent Lookup</h2>
+<p>Hermes locates the permanent <code>Hermes-{projectName}</code> profile.</p>
+<p>If no project agent exists, the ticket cannot use normal maintenance mode. It should go through a future onboarding/adoption workflow.</p>
+<h2 id="03-issue-fix-workflow-mad-confidence-debate">MAD Confidence Debate</h2>
+<p>Hermes-ProjectManager and Hermes-{projectName} independently score the task.</p>
+<p>Scoring considers:</p>
+<pre><code>file scope clarity
+reproduction clarity
+expected blast radius
+dependency risk
+database risk
+auth/security/payment risk
+test availability
+prior project memory
+ambiguity level</code></pre>
+<p>Final confidence:</p>
+<pre><code>C_Final = min(C_PM, C_Project)</code></pre>
+<h2 id="03-issue-fix-workflow-execution-topology">Execution Topology</h2>
+<pre><code>If C_Final &gt;= 90:
+  Solo Maintainer Mode
+
+If C_Final &lt; 90:
+  Assembly Line Mode</code></pre>
+<h2 id="03-issue-fix-workflow-solo-maintainer-mode">Solo Maintainer Mode</h2>
+<p>Hermes-{projectName}:</p>
+<pre><code>reads relevant files
+creates patch plan
+applies scoped code changes
+runs appropriate tests
+reviews its own diff against project memory
+creates final report</code></pre>
+<p>Solo mode means solo implementation, not unsupervised release. The first version still requires a final report and sandbox URL before PR/push.</p>
+<h2 id="03-issue-fix-workflow-assembly-line-mode">Assembly Line Mode</h2>
+<p>Hermes-{projectName} becomes Context Oracle and produces:</p>
+<pre><code>blast radius analysis
+files likely involved
+files forbidden or risky
+project conventions
+historical pitfalls
+recommended tests
+veto conditions</code></pre>
+<p>Hermes-ProjectManager creates a sequential worker plan using:</p>
+<pre><code>Hermes-Frontend
+Hermes-Backend
+Hermes-Database
+Hermes-QA</code></pre>
+<p>Hermes-QA verifies acceptance criteria through tests, lint, builds, sandbox checks, and reproduction checks where possible.</p>
+<p>Hermes-{projectName} performs final diff review and may veto changes that violate project memory, architecture, or blast-radius constraints.</p>
+<p>Hermes-Manager performs final policy and security audit.</p>
+<h2 id="03-issue-fix-workflow-human-checkpoint">Human Checkpoint</h2>
+<p>Before PR/push, Hermes must submit:</p>
+<pre><code>final report
+files changed
+tests run
+sandbox URL
+risks
+recommendation</code></pre>
+<p>The human must confirm before PR creation or push.</p>
+</article>
+      <article class="doc" id="04-agent-profiles" data-source="04-agent-profiles.md">
+<h1 id="04-agent-profiles-agent-profiles">Agent Profiles</h1>
+<p>Hermes bot profiling is agent identity architecture, not static prompting.</p>
+<p>Each bot has a structured profile. The runtime prompt is generated from the profile and current workflow context.</p>
+<h2 id="04-agent-profiles-profile-shape">Profile Shape</h2>
+<pre><code>AgentProfile
+  id
+  name
+  type
+  scope
+  role_contract
+  responsibilities
+  non_responsibilities
+  permissions
+  allowed_tools
+  denied_tools
+  memory_sources
+  learning_rules
+  confidence_rubric
+  escalation_rules
+  review_rules
+  communication_style
+  model_config
+  version</code></pre>
+<p>Runtime context is generated from:</p>
+<pre><code>agent profile
+workflow state
+ticket/project context
+relevant memory
+available tools
+current constraints</code></pre>
+<h2 id="04-agent-profiles-storage">Storage</h2>
+<p>Profiles should use two layers:</p>
+<pre><code>Versioned manifests
+  Stable identity, role contracts, permissions, rubrics, learning rules.
+
+Database records
+  Active profile version, runtime state, project assignments, learned memory
+  links, performance history, approved overrides.</code></pre>
+<h2 id="04-agent-profiles-core-profiles">Core Profiles</h2>
+<h3 id="04-agent-profiles-hermes-triage">Hermes-Triage</h3>
+<p>Normalizes requests, extracts target projects/repos, defines acceptance criteria, detects ambiguity, and rejects unsafe or unclear tickets.</p>
+<h3 id="04-agent-profiles-hermes-manager">Hermes-Manager</h3>
+<p>Enforces security, compliance, global policy, workflow gates, token/run anomaly checks, and final governance review.</p>
+<h3 id="04-agent-profiles-hermes-projectmanager">Hermes-ProjectManager</h3>
+<p>Owns workflow execution, task breakdown, worker sequencing, confidence debate participation, and delivery coordination.</p>
+<h3 id="04-agent-profiles-hermes-projectname">Hermes-{projectName}</h3>
+<p>Permanent project expert created only after project validation. It has two modes:</p>
+<pre><code>Solo Maintainer Mode
+  Used for high-confidence routine fixes.
+
+Oracle Mode
+  Used for complex work. Provides blast radius analysis, constraints,
+  historical pitfalls, review, and veto authority.</code></pre>
+<h3 id="04-agent-profiles-hermes-frontend">Hermes-Frontend</h3>
+<p>Handles UI, frontend routes, client state, frontend tests/builds, and frontend API integration.</p>
+<h3 id="04-agent-profiles-hermes-backend">Hermes-Backend</h3>
+<p>Handles API endpoints, service logic, validation, backend tests, and backend framework conventions.</p>
+<h3 id="04-agent-profiles-hermes-database">Hermes-Database</h3>
+<p>Handles migrations, schema changes, seeders, data integrity, and query concerns.</p>
+<h3 id="04-agent-profiles-hermes-qa">Hermes-QA</h3>
+<p>Runs tests, lint, builds, sandbox validation, reproduction checks, and acceptance criteria verification.</p>
+<h2 id="04-agent-profiles-non-responsibilities">Non-Responsibilities</h2>
+<p>Each profile must define what the bot may not do.</p>
+<p>Examples:</p>
+<pre><code>Hermes-QA
+  May run tests and inspect results.
+  May not silently patch source code unless explicitly assigned.
+
+Hermes-Frontend
+  May edit frontend paths.
+  May not alter database migrations.
+
+Hermes-Database
+  May edit migrations, seeders, schema code.
+  May not change UI behavior.
+
+Hermes-{projectName}
+  May veto project-inconsistent changes.
+  May not expand its own permissions.</code></pre>
+</article>
+      <article class="doc" id="05-self-learning-memory" data-source="05-self-learning-memory.md">
+<h1 id="05-self-learning-memory-self-learning-memory">Self-Learning Memory</h1>
+<p>Hermes self-learning should be real, staged, evidence-backed, and permission-bound.</p>
+<h2 id="05-self-learning-memory-core-rule">Core Rule</h2>
+<pre><code>Hermes may observe continuously.
+Hermes may propose learnings automatically.
+Hermes promotes durable memory only through scoped evidence rules.</code></pre>
+<h2 id="05-self-learning-memory-memory-stages">Memory Stages</h2>
+<pre><code>Run Notes
+  Temporary memory created during an active workflow.
+
+Candidate Learnings
+  Structured lessons proposed after validation, failure, merge, or approval.
+
+Promoted Memory
+  Durable memory available to future Hermes runs.
+
+Deprecated/Rejected Memory
+  Memory that should no longer influence agents.</code></pre>
+<h2 id="05-self-learning-memory-memory-scopes">Memory Scopes</h2>
+<pre><code>global
+agent
+project
+repo_path
+workflow
+ticket/run</code></pre>
+<h2 id="05-self-learning-memory-promotion-lanes">Promotion Lanes</h2>
+<h3 id="05-self-learning-memory-lane-1-auto-promoted-facts">Lane 1: Auto-Promoted Facts</h3>
+<p>Narrow, evidence-backed, low-risk facts.</p>
+<p>Examples:</p>
+<pre><code>package manager
+test command
+framework version
+repo structure
+sandbox startup command</code></pre>
+<h3 id="05-self-learning-memory-lane-2-manager-reviewed-project-patterns">Lane 2: Manager-Reviewed Project Patterns</h3>
+<p>Broader lessons that influence future fixes.</p>
+<p>Examples:</p>
+<pre><code>preferred implementation patterns
+repeated failure modes
+project-specific testing expectations
+fragile modules</code></pre>
+<h3 id="05-self-learning-memory-lane-3-governance-gated-behavior-changes">Lane 3: Governance-Gated Behavior Changes</h3>
+<p>Anything that changes authority, policy, security, or agent behavior.</p>
+<p>Examples:</p>
+<pre><code>permission expansion
+skipping approval checkpoints
+modifying security rules
+changing confidence thresholds</code></pre>
+<h2 id="05-self-learning-memory-memory-record-shape">Memory Record Shape</h2>
+<pre><code>MemoryRecord
+  id
+  type
+  scope
+  summary
+  details
+  status
+  confidence
+  evidence_refs
+  source_run_id
+  source_ticket_id
+  source_commit_or_pr
+  created_by_agent
+  reviewed_by
+  created_at
+  review_after</code></pre>
+<h2 id="05-self-learning-memory-project-agent-memory">Project Agent Memory</h2>
+<p>Permanent <code>Hermes-{projectName}</code> loads:</p>
+<pre><code>promoted project memory
+relevant repo_path memory
+current ticket context
+recent successful fix summaries
+known constraints</code></pre>
+<p>It does not load raw transcripts by default.</p>
+<h2 id="05-self-learning-memory-new-project-creation">New Project Creation</h2>
+<p>During project creation, Hermes uses <code>ProjectContextCandidate</code>.</p>
+<p>After validation, Hermes distills clean project memory and creates permanent <code>Hermes-{projectName}</code>.</p>
+<h2 id="05-self-learning-memory-safety-rule">Safety Rule</h2>
+<pre><code>Hermes can learn what is true.
+Hermes can propose what should be preferred.
+Hermes cannot autonomously grant itself more power.</code></pre>
+</article>
+      <article class="doc" id="06-security-permissions" data-source="06-security-permissions.md">
+<h1 id="06-security-permissions-security-and-permissions">Security and Permissions</h1>
+<p>Hermes security should be capability-based. It should prevent dangerous autonomy without blocking legitimate fixes and project creation.</p>
+<h2 id="06-security-permissions-policy-inputs">Policy Inputs</h2>
+<p>Every action is evaluated using:</p>
+<pre><code>agent role
+workflow type
+project/repo scope
+file path scope
+command risk
+data risk
+approval state
+environment</code></pre>
+<h2 id="06-security-permissions-risk-tiers">Risk Tiers</h2>
+<h3 id="06-security-permissions-low-risk">Low Risk</h3>
+<p>Allowed for relevant agents inside assigned scope:</p>
+<pre><code>read files
+search code
+inspect git status/diff
+read generated docs
+create run notes
+run non-destructive tests
+apply patch to assigned files
+summarize logs</code></pre>
+<h3 id="06-security-permissions-medium-risk">Medium Risk</h3>
+<p>Allowed only to specific roles or after ProjectManager authorization:</p>
+<pre><code>install dependencies
+change config files
+modify CI files
+start sandbox servers
+run migrations in sandbox
+modify package files
+create new files
+change tests</code></pre>
+<h3 id="06-security-permissions-high-risk">High Risk</h3>
+<p>Requires escalation, Manager approval, or explicit workflow checkpoint:</p>
+<pre><code>modify auth/security/payment code
+edit env/secrets
+delete files
+destructive database commands
+production commands
+force push
+merge PR
+change agent permissions
+change confidence thresholds
+promote governance memory</code></pre>
+<p>High-risk actions are not permanently forbidden. They require justification and approval.</p>
+<h2 id="06-security-permissions-capability-request">Capability Request</h2>
+<p>Example:</p>
+<pre><code>agent: Hermes-Backend
+workflow: issue_fix
+run_id: run_123
+action: repo.apply_patch
+target: backend/app/Http/Controllers/AuthController.php
+risk: high
+justification: Fixes acceptance criteria around login validation.
+approval_state: project_manager_assigned</code></pre>
+<p>Policy response:</p>
+<pre><code>allowed
+denied
+needs_escalation
+needs_human_approval
+needs_manager_approval</code></pre>
+<h2 id="06-security-permissions-non-negotiable-guards">Non-Negotiable Guards</h2>
+<pre><code>No agent may expand its own permissions through learning.
+No memory record may weaken approval rules without governance approval.
+No workflow may skip required human checkpoints.
+No issue-fix workflow may PR/push without human checkpoint in the first version.</code></pre>
+<h2 id="06-security-permissions-required-issue-fix-checkpoint">Required Issue-Fix Checkpoint</h2>
+<p>Before PR/push:</p>
+<pre><code>Hermes must provide final report + sandbox URL.
+Human confirms before PR creation or push.</code></pre>
+</article>
+      <article class="doc" id="07-dtt-ai-integration-contract" data-source="07-dtt-ai-integration-contract.md">
+<h1 id="07-dtt-ai-integration-contract-dtt-ai-integration-contract">DTT-AI Integration Contract</h1>
+<p>DTT-AI integration can come after the bots are defined, but <code>hermes-core</code> should be designed for it from the beginning.</p>
+<h2 id="07-dtt-ai-integration-contract-boundary">Boundary</h2>
+<pre><code>DTT-AI
+  Human-facing control plane and terminal UI.
+
+hermes-core
+  AI orchestration, workflow, profiles, memory, policy, reporting.
+
+hermes-runner
+  Controlled execution, file/repo operations, commands, tests, interactive
+  sessions.</code></pre>
+<p>DTT-AI should receive structured events and send human input or approval events back to Hermes.</p>
+<h2 id="07-dtt-ai-integration-contract-contracts">Contracts</h2>
+<pre><code>Event Stream
+  Hermes publishes workflow, agent, policy, terminal, test, report, and memory
+  events.
+
+Command/Input API
+  DTT-AI sends human answers, approvals, cancellations, and prompt responses.
+
+Terminal Session Bridge
+  hermes-runner exposes live stdout/stderr and accepts stdin when needed.</code></pre>
+<h2 id="07-dtt-ai-integration-contract-event-types">Event Types</h2>
+<pre><code>workflow.created
+workflow.state_changed
+workflow.completed
+workflow.failed
+
+agent.started
+agent.message
+agent.completed
+agent.failed
+
+mad.score_submitted
+mad.final_score_calculated
+mad.topology_selected
+
+policy.allowed
+policy.denied
+policy.escalation_required
+
+terminal.session_started
+terminal.stdout
+terminal.stderr
+terminal.prompt_detected
+terminal.stdin_written
+terminal.session_completed
+
+human.input_required
+human.input_received
+human.approval_required
+human.approval_received
+
+repo.file_changed
+repo.diff_ready
+test.started
+test.completed
+sandbox.started
+sandbox.url_ready
+
+report.ready
+learning.candidate_created
+memory.promoted</code></pre>
+<h2 id="07-dtt-ai-integration-contract-new-project-interaction">New Project Interaction</h2>
+<pre><code>Hermes-ProjectManager requests interactive terminal.
+hermes-runner starts larv:full.
+Terminal output streams as events.
+DTT-AI displays output.
+Prompt detector identifies question/input need.
+DTT-AI shows human choices/input box.
+Human responds.
+DTT-AI sends input back.
+hermes-runner writes stdin.
+Hermes records prompt/answer history.</code></pre>
+<h2 id="07-dtt-ai-integration-contract-issue-fix-interaction">Issue Fix Interaction</h2>
+<pre><code>Hermes runs workflow.
+DTT-AI shows bot status and logs.
+Sandbox URL becomes available.
+report.ready is emitted.
+Human reviews sandbox/report.
+DTT-AI sends approval or rejection.
+Hermes proceeds or revises.</code></pre>
+<h2 id="07-dtt-ai-integration-contract-availability-rule">Availability Rule</h2>
+<p>Hermes should not depend on the DTT-AI browser being open.</p>
+<p>Runs continue server-side. DTT-AI observes and intervenes when needed.</p>
+<h2 id="07-dtt-ai-integration-contract-memory-ownership">Memory Ownership</h2>
+<p>DTT-AI is not the source of Hermes memory.</p>
+<pre><code>DTT-AI displays memory, reports, and events.
+hermes-core stores and governs them.</code></pre>
+</article>
+      <article class="doc" id="08-first-proof-of-concept" data-source="08-first-proof-of-concept.md">
+<h1 id="08-first-proof-of-concept-first-proof-of-concept">First Proof of Concept</h1>
+<p>The first proof must execute real workflows. It must not be a fake MVP, simulated bot demo, or UI-only prototype.</p>
+<h2 id="08-first-proof-of-concept-poc-a-new-project-creation">POC A: New Project Creation</h2>
+<p>Goal:</p>
+<pre><code>Use Hermes to create one real project through larv:full, ingest the result,
+validate it, and create a permanent project agent.</code></pre>
+<p>Required behavior:</p>
+<pre><code>1. Human submits a new project request.
+2. Hermes-Triage normalizes it.
+3. Hermes-Manager checks stack/policy requirements.
+4. Hermes-ProjectManager runs larv:full.
+5. Human answers larv:full prompts through an interactive terminal session.
+6. Hermes ingests larv artifacts and transcript.
+7. Hermes creates ProjectContextCandidate.
+8. Hermes-ProjectManager creates sequential worker tasks.
+9. Hermes-Frontend, Hermes-Backend, and Hermes-Database run only if needed.
+10. Hermes-QA validates tests/build/sandbox.
+11. Hermes-Manager produces final review.
+12. Permanent Hermes-{projectName} is created after validation.
+13. Learning candidates are created.
+14. Completion report is produced.</code></pre>
+<p>This proves:</p>
+<pre><code>interactive project discovery
+real command execution
+artifact ingestion
+workflow state
+profile-backed agents
+validation
+project-agent creation
+memory candidate generation</code></pre>
+<h2 id="08-first-proof-of-concept-poc-b-issue-fix">POC B: Issue Fix</h2>
+<p>Goal:</p>
+<pre><code>Use Hermes to fix one real issue in a real existing project.</code></pre>
+<p>Required behavior:</p>
+<pre><code>1. Human submits issue ticket.
+2. Hermes-Triage normalizes issue and acceptance criteria.
+3. Hermes loads Hermes-{projectName}.
+4. Hermes-ProjectManager and Hermes-{projectName} perform MAD confidence scoring.
+5. C_Final = min(C_PM, C_Project).
+6. Hermes chooses Solo Maintainer or Assembly Line mode.
+7. Correct agent applies real code changes.
+8. Hermes-QA runs relevant tests/build/sandbox checks.
+9. Hermes-{projectName} reviews diff.
+10. Hermes-Manager audits.
+11. Hermes produces report + sandbox URL.
+12. Human confirms before PR/push.
+13. Learning candidates are created after validation.</code></pre>
+<p>This proves:</p>
+<pre><code>ticket normalization
+project memory use
+confidence debate
+solo vs assembly topology
+real patch execution
+verification
+human approval checkpoint
+learning candidate creation</code></pre>
+<h2 id="08-first-proof-of-concept-deferred">Deferred</h2>
+<pre><code>parallel tactical workers
+full DTT-AI integration
+GitHub PR automation
+Linear webhook support
+advanced vector retrieval
+fully automated memory governance
+multi-project fleet scaling
+production deployment</code></pre>
+<h2 id="08-first-proof-of-concept-must-not-be-faked">Must Not Be Faked</h2>
+<pre><code>agent profiles
+workflow states
+real command execution
+real file changes
+real validation
+real reports
+learning records</code></pre>
+</article>
+      <article class="doc" id="09-interactive-session-resume" data-source="09-interactive-session-resume.md">
+<h1 id="09-interactive-session-resume-resumable-interactive-sessions">Resumable Interactive Sessions</h1>
+<p><code>larv:full</code> asks questions mid-run. Hermes must treat this as normal workflow state, not as a broken SSH connection.</p>
+<p>The design goal:</p>
+<pre><code>DTT-AI can disconnect.
+The human browser can disconnect.
+The visual terminal can reconnect.
+The Hermes interactive session remains durable server-side.</code></pre>
+<h2 id="09-interactive-session-resume-interactive-session-record">Interactive Session Record</h2>
+<p>When Hermes starts an interactive command, the execution adapter creates an interactive session record.</p>
+<pre><code>InteractiveSession
+  id
+  run_id
+  workflow_type
+  command
+  working_directory
+  process_id_or_pty_id
+  status
+  transcript_ref
+  prompt_history
+  last_prompt
+  stdin_history
+  created_at
+  last_seen_at</code></pre>
+<p>Supported statuses:</p>
+<pre><code>running
+waiting_for_input
+resumed
+completed
+failed
+interrupted
+recovery_required
+expired</code></pre>
+<h2 id="09-interactive-session-resume-larv-full-flow">larv:full Flow</h2>
+<pre><code>1. Hermes-ProjectManager starts larv:full.
+2. hermes-runner opens a persistent PTY/SSH-backed process.
+3. Session ID is stored immediately.
+4. stdout/stderr are streamed and appended to transcript storage.
+5. When larv:full asks a question, prompt detection marks the session as
+   waiting_for_input.
+6. DTT-AI displays the question to the human.
+7. Human submits an answer.
+8. DTT-AI sends session_id + answer to hermes-core/hermes-runner.
+9. hermes-runner writes the answer to the same PTY stdin.
+10. Workflow continues.</code></pre>
+<h2 id="09-interactive-session-resume-resume-vs-restart">Resume vs Restart</h2>
+<pre><code>Resume connection != restart larv:full</code></pre>
+<p>The preferred behavior is to keep the same process alive while waiting for input.</p>
+<p>DTT-AI may reconnect visually, but the backend session should remain alive.</p>
+<p>If the underlying SSH connection or process dies, Hermes must not blindly restart. It should mark the session as interrupted and let Hermes-ProjectManager decide whether recovery is possible from artifacts and transcript.</p>
+<h2 id="09-interactive-session-resume-workflow-states">Workflow States</h2>
+<p>New project creation should include:</p>
+<pre><code>larv_full_session_started
+larv_full_waiting_for_input
+larv_full_input_received
+larv_full_resumed
+larv_full_completed
+larv_full_interrupted
+larv_full_recovery_required</code></pre>
+<h2 id="09-interactive-session-resume-prompt-detection">Prompt Detection</h2>
+<p>Initial prompt detection can use:</p>
+<pre><code>known prompt markers
+question-like output
+process idle state
+input expected heuristics</code></pre>
+<p>Longer-term, <code>larv:full</code> should emit structured prompt events.</p>
+<p>Example future event:</p>
+<pre><code>{
+  &quot;type&quot;: &quot;prompt.required&quot;,
+  &quot;session_id&quot;: &quot;sess_123&quot;,
+  &quot;prompt_id&quot;: &quot;project_stack_choice&quot;,
+  &quot;question&quot;: &quot;Which stack do you want?&quot;,
+  &quot;options&quot;: [&quot;Laravel&quot;, &quot;Fastify&quot;, &quot;Next.js&quot;],
+  &quot;input_type&quot;: &quot;single_choice&quot;
+}</code></pre>
+<h2 id="09-interactive-session-resume-stdin-replay-protection">Stdin Replay Protection</h2>
+<p>Hermes must record submitted answers so the same human input is not accidentally replayed after a reconnect.</p>
+<p>Each submitted answer should include:</p>
+<pre><code>session_id
+prompt_id when available
+answer
+submitted_by
+submitted_at
+stdin_write_id</code></pre>
+<p>If <code>prompt_id</code> is unavailable, Hermes should use the active session state and last prompt hash to reduce duplicate writes.</p>
+<h2 id="09-interactive-session-resume-transcript-storage">Transcript Storage</h2>
+<p>Hermes stores:</p>
+<pre><code>stdout
+stderr
+prompt history
+human answers
+state transitions
+warnings
+errors
+completion status</code></pre>
+<p>The transcript supports audit, artifact ingestion, recovery decisions, and future project memory distillation.</p>
+</article>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,37 @@
+id: hermes-frontend
+name: Hermes-Frontend
+type: tactical_worker
+version: 1
+role_contract: Implement frontend changes within assigned scope.
+responsibilities:
+  - Implement frontend components, routes, client state, and frontend API integration.
+  - Run frontend tests, lint, and builds when assigned.
+non_responsibilities:
+  - Database migrations.
+  - Backend auth policy changes.
+allowed_tools:
+  - repo.read_file
+  - repo.search
+  - repo.apply_patch
+  - terminal.run_command
+denied_tools:
+  - memory.promote
+memory_sources:
+  - project_memory
+  - run_notes
+path_scopes:
+  - frontend/
+  - web/
+  - resources/js/
+  - src/
+learning_rules:
+  auto_candidate_types:
+    - frontend_fact
+confidence_rubric: {}
+escalation_rules:
+  - Escalate when frontend change requires backend contract changes.
+review_rules: []
+communication_style: concise
+model_config:
+  provider: minimax
+
