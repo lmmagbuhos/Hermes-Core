@@ -12,3 +12,4 @@ Open `docs/hermes/index.html` in a browser to read the rendered documentation.
 
 The generated page follows the standalone HTML pattern from `ThariqS/html-effectiveness`: no build step is needed to view it after generation, and it has no runtime dependencies.
 
+For DTT-AI integration with the `larv:full` skill, start with `10-dtt-ai-larv-skill-contract.md`.

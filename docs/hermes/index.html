@@ -248,8 +248,9 @@
         <a href="#07-dtt-ai-integration-contract">DTT-AI Integration Contract</a>
         <a href="#08-first-proof-of-concept">First Proof of Concept</a>
         <a href="#09-interactive-session-resume">Resumable Interactive Sessions</a>
+        <a href="#10-dtt-ai-larv-skill-contract">DTT-AI Larv Skill Contract</a>
       </nav>
-      <p class="meta">Generated 2026-05-24T07:19:53.635Z from docs/hermes/*.md.</p>
+      <p class="meta">Generated 2026-05-24T07:32:17.067Z from docs/hermes/*.md.</p>
     </aside>
     <main>
       <section class="hero" aria-labelledby="page-title">
@@ -1152,6 +1153,195 @@ warnings
 errors
 completion status</code></pre>
 <p>The transcript supports audit, artifact ingestion, recovery decisions, and future project memory distillation.</p>
+</article>
+      <article class="doc" id="10-dtt-ai-larv-skill-contract" data-source="10-dtt-ai-larv-skill-contract.md">
+<h1 id="10-dtt-ai-larv-skill-contract-dtt-ai-larv-skill-contract">DTT-AI Larv Skill Contract</h1>
+<p>This document defines how DTT-AI connects to Hermes Core when DTT-AI invokes the <code>larv:full</code> skill.</p>
+<h2 id="10-dtt-ai-larv-skill-contract-ownership-boundary">Ownership Boundary</h2>
+<pre><code>DTT-AI / agent runtime
+  Invokes larv:full.
+  Displays skill output to the human.
+  Collects human answers to larv prompts.
+  Reports lifecycle events to Hermes Core.
+
+Hermes Core
+  Does not invoke larv:full directly.
+  Records workflow state, session metadata, output, answers, and completion.
+  Ingests generated artifacts from the reported project directory.
+  Creates ProjectContextCandidate.</code></pre>
+<h2 id="10-dtt-ai-larv-skill-contract-base-url">Base URL</h2>
+<p>Use the Hermes Core service URL configured for the environment.</p>
+<p>Example local development URL:</p>
+<pre><code>http://127.0.0.1:8000</code></pre>
+<h2 id="10-dtt-ai-larv-skill-contract-sequence">Sequence</h2>
+<p>DTT-AI should call the endpoints in this order:</p>
+<pre><code>1. POST /workflows/new-project/larv-skill/session-started
+2. POST /workflows/new-project/larv-skill/{session_id}/output
+3. POST /workflows/new-project/larv-skill/{session_id}/human-answer
+4. Repeat output and human-answer as needed
+5. POST /workflows/new-project/larv-skill/{session_id}/completed</code></pre>
+<p>Hermes returns its own <code>interactive_session.id</code>. Use that value as <code>{session_id}</code> in later calls.</p>
+<h2 id="10-dtt-ai-larv-skill-contract-1-session-started">1. Session Started</h2>
+<p>Call this immediately after DTT-AI starts the <code>larv:full</code> skill.</p>
+<pre><code>POST /workflows/new-project/larv-skill/session-started
+Content-Type: application/json</code></pre>
+<p>Request:</p>
+<pre><code>{
+  &quot;project_name&quot;: &quot;AeroTrack&quot;,
+  &quot;external_session_id&quot;: &quot;dtt-session-123&quot;,
+  &quot;cwd&quot;: &quot;/home/projects/AeroTrack&quot;
+}</code></pre>
+<p>Fields:</p>
+<pre><code>project_name
+  Human-readable project name.
+
+external_session_id
+  DTT-AI or agent-runtime session ID. Hermes stores this for correlation.
+
+cwd
+  Project working directory or expected artifact root.</code></pre>
+<p>Response:</p>
+<pre><code>{
+  &quot;run&quot;: {
+    &quot;id&quot;: 1,
+    &quot;workflow_type&quot;: &quot;new_project_creation&quot;,
+    &quot;state&quot;: &quot;larv_full_session_started&quot;,
+    &quot;payload&quot;: {
+      &quot;project_name&quot;: &quot;AeroTrack&quot;,
+      &quot;cwd&quot;: &quot;/home/projects/AeroTrack&quot;,
+      &quot;external_larv_session_id&quot;: &quot;dtt-session-123&quot;,
+      &quot;invocation_owner&quot;: &quot;dtt_ai_agent_runtime&quot;,
+      &quot;interactive_session_id&quot;: &quot;sess_abc&quot;
+    }
+  },
+  &quot;interactive_session&quot;: {
+    &quot;id&quot;: &quot;sess_abc&quot;,
+    &quot;run_id&quot;: 1,
+    &quot;command&quot;: [&quot;skill:larv:full&quot;],
+    &quot;cwd&quot;: &quot;/home/projects/AeroTrack&quot;,
+    &quot;status&quot;: &quot;running&quot;,
+    &quot;last_prompt&quot;: null,
+    &quot;transcript_ref&quot;: &quot;/home/projects/AeroTrack/.hermes/transcripts/run_1.log&quot;
+  }
+}</code></pre>
+<h2 id="10-dtt-ai-larv-skill-contract-2-output-chunk">2. Output Chunk</h2>
+<p>Call this whenever DTT-AI receives output from the skill/agent session.</p>
+<pre><code>POST /workflows/new-project/larv-skill/{session_id}/output
+Content-Type: application/json</code></pre>
+<p>Request:</p>
+<pre><code>{
+  &quot;output&quot;: &quot;Which backend stack should be used?&quot;
+}</code></pre>
+<p>Current fields:</p>
+<pre><code>output
+  Raw text chunk to append to Hermes transcript.</code></pre>
+<p>Response:</p>
+<pre><code>{
+  &quot;run&quot;: {
+    &quot;id&quot;: 1,
+    &quot;workflow_type&quot;: &quot;new_project_creation&quot;,
+    &quot;state&quot;: &quot;larv_full_session_started&quot;,
+    &quot;payload&quot;: {}
+  },
+  &quot;interactive_session&quot;: {
+    &quot;id&quot;: &quot;sess_abc&quot;,
+    &quot;run_id&quot;: 1,
+    &quot;command&quot;: [&quot;skill:larv:full&quot;],
+    &quot;cwd&quot;: &quot;/home/projects/AeroTrack&quot;,
+    &quot;status&quot;: &quot;running&quot;,
+    &quot;last_prompt&quot;: null,
+    &quot;transcript_ref&quot;: &quot;/home/projects/AeroTrack/.hermes/transcripts/run_1.log&quot;
+  }
+}</code></pre>
+<h2 id="10-dtt-ai-larv-skill-contract-3-human-answer">3. Human Answer</h2>
+<p>Call this after the human answers a <code>larv:full</code> prompt in DTT-AI.</p>
+<pre><code>POST /workflows/new-project/larv-skill/{session_id}/human-answer
+Content-Type: application/json</code></pre>
+<p>Request:</p>
+<pre><code>{
+  &quot;prompt_id&quot;: &quot;stack-choice-001&quot;,
+  &quot;answer&quot;: &quot;Fastify and Next.js&quot;
+}</code></pre>
+<p>Fields:</p>
+<pre><code>prompt_id
+  DTT-AI prompt identifier. Must be stable per prompt.
+
+answer
+  Human answer submitted to larv:full.</code></pre>
+<p>Response state:</p>
+<pre><code>run.state = larv_full_input_received</code></pre>
+<p>Hermes records this answer for audit and replay protection. DTT-AI remains responsible for sending the answer to the actual <code>larv:full</code> skill runtime.</p>
+<h2 id="10-dtt-ai-larv-skill-contract-4-completed">4. Completed</h2>
+<p>Call this when the <code>larv:full</code> skill finishes and generated artifacts are available.</p>
+<pre><code>POST /workflows/new-project/larv-skill/{session_id}/completed
+Content-Type: application/json</code></pre>
+<p>Request:</p>
+<pre><code>{
+  &quot;project_dir&quot;: &quot;/home/projects/AeroTrack&quot;
+}</code></pre>
+<p>Fields:</p>
+<pre><code>project_dir
+  Directory where larv generated project docs/code/artifacts.
+  Hermes Core must be able to read this path.</code></pre>
+<p>Response state:</p>
+<pre><code>run.state = project_context_candidate_created</code></pre>
+<p>Hermes will:</p>
+<pre><code>1. mark the recorded larv skill session completed
+2. read the transcript file
+3. ingest generated artifacts
+4. create HermesProjectBlueprint
+5. create ProjectContextCandidate</code></pre>
+<h2 id="10-dtt-ai-larv-skill-contract-artifact-access-requirement">Artifact Access Requirement</h2>
+<p>Hermes Core must be able to read <code>project_dir</code>.</p>
+<p>If DTT-AI and Hermes Core run on the same server, pass the local filesystem path.</p>
+<p>If DTT-AI and Hermes Core run on different servers, DTT-AI must provide one of:</p>
+<pre><code>shared mounted storage path
+downloadable artifact bundle
+artifact upload endpoint
+repository URL/branch after generation</code></pre>
+<p>The current Hermes implementation expects a readable local <code>project_dir</code>.</p>
+<h2 id="10-dtt-ai-larv-skill-contract-current-limitations">Current Limitations</h2>
+<p>The current API records core lifecycle events. The next hardening pass should add:</p>
+<pre><code>auth/shared token
+idempotency keys
+output sequence numbers
+stdout/stderr/agent stream labels
+failed/interrupted endpoint
+artifact path validation details
+structured prompt metadata</code></pre>
+<h2 id="10-dtt-ai-larv-skill-contract-minimal-dtt-ai-pseudocode">Minimal DTT-AI Pseudocode</h2>
+<pre><code>import requests
+
+HERMES = &quot;http://127.0.0.1:8000&quot;
+
+started = requests.post(
+    f&quot;{HERMES}/workflows/new-project/larv-skill/session-started&quot;,
+    json={
+        &quot;project_name&quot;: &quot;AeroTrack&quot;,
+        &quot;external_session_id&quot;: dtt_session_id,
+        &quot;cwd&quot;: project_dir,
+    },
+).json()
+
+session_id = started[&quot;interactive_session&quot;][&quot;id&quot;]
+
+def on_larv_output(text: str):
+    requests.post(
+        f&quot;{HERMES}/workflows/new-project/larv-skill/{session_id}/output&quot;,
+        json={&quot;output&quot;: text},
+    )
+
+def on_human_answer(prompt_id: str, answer: str):
+    requests.post(
+        f&quot;{HERMES}/workflows/new-project/larv-skill/{session_id}/human-answer&quot;,
+        json={&quot;prompt_id&quot;: prompt_id, &quot;answer&quot;: answer},
+    )
+
+def on_larv_completed(project_dir: str):
+    requests.post(
+        f&quot;{HERMES}/workflows/new-project/larv-skill/{session_id}/completed&quot;,
+        json={&quot;project_dir&quot;: project_dir},
+    )</code></pre>
 </article>
     </main>
   </div>
