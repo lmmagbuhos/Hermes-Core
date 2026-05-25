@@ -251,7 +251,7 @@
         <a href="#10-dtt-ai-larv-skill-contract">DTT-AI Larv Skill Contract</a>
         <a href="#11-dtt-ai-handoff">DTT-AI Handoff</a>
       </nav>
-      <p class="meta">Generated 2026-05-24T15:27:14.887Z from docs/hermes/*.md.</p>
+      <p class="meta">Generated 2026-05-25T01:14:54.620Z from docs/hermes/*.md.</p>
     </aside>
     <main>
       <section class="hero" aria-labelledby="page-title">
@@ -1609,6 +1609,25 @@ metadata.phase = &lt;detected larv phase when known&gt;</code></pre>
 <pre><code>artifact upload endpoint
 shared artifact bundle path
 repository URL/branch ingestion</code></pre>
+<h2 id="11-dtt-ai-handoff-environment-validation">Environment Validation</h2>
+<p>Before wiring a real <code>larv:full</code> run, validate the same-server connection from the Hermes Core checkout:</p>
+<pre><code>PYTHONPATH=src uvicorn hermes_core.app:app --host 0.0.0.0 --port 8000</code></pre>
+<p>In another terminal:</p>
+<pre><code>HERMES_URL=http://127.0.0.1:8000 \
+HERMES_DTT_AI_SHARED_TOKEN=&lt;shared-token&gt; \
+python3 tools/validate_dtt_ai_environment.py \
+  --workspace-path /home/dtt-ai/workspaces</code></pre>
+<p>The validation checks:</p>
+<pre><code>Hermes /health is reachable.
+The shared token works against protected larv-skill endpoints.
+The DTT-AI workspace path exists and is readable/writable by this process.
+Hermes can complete a test project from that workspace path.
+Hermes can record a failed larv skill session.</code></pre>
+<p>Expected successful result:</p>
+<pre><code>{
+  &quot;ok&quot;: true
+}</code></pre>
+<p>If this fails, fix the reported workspace path, token, URL, or process permissions before connecting the real DTT-AI UI.</p>
 <h2 id="11-dtt-ai-handoff-reference-smoke-client">Reference Smoke Client</h2>
 <p>Start Hermes Core:</p>
 <pre><code>PYTHONPATH=src uvicorn hermes_core.app:app --host 0.0.0.0 --port 8000</code></pre>

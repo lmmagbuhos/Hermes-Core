@@ -169,6 +169,43 @@ shared artifact bundle path
 repository URL/branch ingestion
 ```
 
+## Environment Validation
+
+Before wiring a real `larv:full` run, validate the same-server connection from the Hermes Core checkout:
+
+```bash
+PYTHONPATH=src uvicorn hermes_core.app:app --host 0.0.0.0 --port 8000
+```
+
+In another terminal:
+
+```bash
+HERMES_URL=http://127.0.0.1:8000 \
+HERMES_DTT_AI_SHARED_TOKEN=<shared-token> \
+python3 tools/validate_dtt_ai_environment.py \
+  --workspace-path /home/dtt-ai/workspaces
+```
+
+The validation checks:
+
+```text
+Hermes /health is reachable.
+The shared token works against protected larv-skill endpoints.
+The DTT-AI workspace path exists and is readable/writable by this process.
+Hermes can complete a test project from that workspace path.
+Hermes can record a failed larv skill session.
+```
+
+Expected successful result:
+
+```json
+{
+  "ok": true
+}
+```
+
+If this fails, fix the reported workspace path, token, URL, or process permissions before connecting the real DTT-AI UI.
+
 ## Reference Smoke Client
 
 Start Hermes Core:
