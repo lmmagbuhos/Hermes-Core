@@ -351,7 +351,38 @@ Hermes will:
 5. create ProjectContextCandidate
 ```
 
-If `project_dir` does not exist or is not readable by Hermes Core, Hermes returns `400` with a validation detail and does not mark the session completed.
+If Hermes Core cannot ingest `project_dir`, it returns `400` with structured validation detail and does not mark the session completed.
+
+Example error:
+
+```json
+{
+  "detail": {
+    "code": "project_dir_missing",
+    "message": "Project directory does not exist: /home/projects/AeroTrack",
+    "path": "/home/projects/AeroTrack"
+  }
+}
+```
+
+Error codes:
+
+```text
+project_dir_missing
+  The reported path does not exist from the Hermes Core process.
+
+project_dir_not_directory
+  The reported path exists but is a file or non-directory path.
+
+project_dir_not_readable
+  Hermes Core cannot list/read the reported directory.
+
+transcript_not_readable
+  Hermes Core recorded a transcript path but cannot read it during completion.
+
+artifact_ingestion_failed
+  Hermes Core reached the project directory but failed while parsing generated artifacts.
+```
 
 ## 6. Failed
 

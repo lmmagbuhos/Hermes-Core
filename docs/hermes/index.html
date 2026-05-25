@@ -251,7 +251,7 @@
         <a href="#10-dtt-ai-larv-skill-contract">DTT-AI Larv Skill Contract</a>
         <a href="#11-dtt-ai-handoff">DTT-AI Handoff</a>
       </nav>
-      <p class="meta">Generated 2026-05-25T01:14:54.620Z from docs/hermes/*.md.</p>
+      <p class="meta">Generated 2026-05-25T01:19:16.175Z from docs/hermes/*.md.</p>
     </aside>
     <main>
       <section class="hero" aria-labelledby="page-title">
@@ -1390,7 +1390,30 @@ project_dir
 3. ingest generated artifacts
 4. create HermesProjectBlueprint
 5. create ProjectContextCandidate</code></pre>
-<p>If <code>project_dir</code> does not exist or is not readable by Hermes Core, Hermes returns <code>400</code> with a validation detail and does not mark the session completed.</p>
+<p>If Hermes Core cannot ingest <code>project_dir</code>, it returns <code>400</code> with structured validation detail and does not mark the session completed.</p>
+<p>Example error:</p>
+<pre><code>{
+  &quot;detail&quot;: {
+    &quot;code&quot;: &quot;project_dir_missing&quot;,
+    &quot;message&quot;: &quot;Project directory does not exist: /home/projects/AeroTrack&quot;,
+    &quot;path&quot;: &quot;/home/projects/AeroTrack&quot;
+  }
+}</code></pre>
+<p>Error codes:</p>
+<pre><code>project_dir_missing
+  The reported path does not exist from the Hermes Core process.
+
+project_dir_not_directory
+  The reported path exists but is a file or non-directory path.
+
+project_dir_not_readable
+  Hermes Core cannot list/read the reported directory.
+
+transcript_not_readable
+  Hermes Core recorded a transcript path but cannot read it during completion.
+
+artifact_ingestion_failed
+  Hermes Core reached the project directory but failed while parsing generated artifacts.</code></pre>
 <h2 id="10-dtt-ai-larv-skill-contract-6-failed">6. Failed</h2>
 <p>Call this when DTT-AI knows the <code>larv:full</code> skill cannot continue.</p>
 <pre><code>POST /workflows/new-project/larv-skill/{session_id}/failed
@@ -1605,6 +1628,13 @@ metadata.phase = &lt;detected larv phase when known&gt;</code></pre>
 <h2 id="11-dtt-ai-handoff-artifact-requirement">Artifact Requirement</h2>
 <p>For <code>completed</code>, Hermes Core must be able to read <code>project_dir</code>.</p>
 <p>This works when DTT-AI and Hermes Core share the same filesystem or mounted storage.</p>
+<p>If completion fails, Hermes returns a structured <code>400</code> error. DTT-AI should show the <code>detail.message</code> to the operator and log <code>detail.code</code> plus <code>detail.path</code>.</p>
+<p>Expected artifact error codes:</p>
+<pre><code>project_dir_missing
+project_dir_not_directory
+project_dir_not_readable
+transcript_not_readable
+artifact_ingestion_failed</code></pre>
 <p>If they do not share a filesystem, do not call <code>completed</code> with a private DTT-AI-local path. The next contract extension should be one of:</p>
 <pre><code>artifact upload endpoint
 shared artifact bundle path

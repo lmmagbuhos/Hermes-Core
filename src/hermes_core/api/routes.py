@@ -4,6 +4,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
+from hermes_core.artifacts.errors import ArtifactValidationError
 from hermes_core.config import get_settings
 from hermes_core.db import create_session_factory, init_db
 from hermes_core.idempotency.service import IdempotencyService
@@ -364,8 +365,8 @@ def complete_larv_skill_session(
             session_id,
             project_dir=Path(request.project_dir),
         )
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
+    except ArtifactValidationError as error:
+        raise HTTPException(status_code=400, detail=error.to_detail()) from error
     payload = _workflow_result_payload(result)
     payload["idempotent_replay"] = False
     _record_idempotency(

@@ -161,6 +161,18 @@ For `completed`, Hermes Core must be able to read `project_dir`.
 
 This works when DTT-AI and Hermes Core share the same filesystem or mounted storage.
 
+If completion fails, Hermes returns a structured `400` error. DTT-AI should show the `detail.message` to the operator and log `detail.code` plus `detail.path`.
+
+Expected artifact error codes:
+
+```text
+project_dir_missing
+project_dir_not_directory
+project_dir_not_readable
+transcript_not_readable
+artifact_ingestion_failed
+```
+
 If they do not share a filesystem, do not call `completed` with a private DTT-AI-local path. The next contract extension should be one of:
 
 ```text

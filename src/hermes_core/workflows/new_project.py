@@ -3,6 +3,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session, sessionmaker
 
+from hermes_core.artifacts.errors import ArtifactValidationError
 from hermes_core.artifacts.ingest import ingest_project_artifacts
 from hermes_core.events.service import EventService
 from hermes_core.models import InteractiveSessionRecord, Run
@@ -291,15 +292,21 @@ class NewProjectWorkflowService:
         *,
         project_dir: Path,
     ) -> NewProjectWorkflowResult:
-        if not project_dir.exists():
-            raise ValueError(f"project_dir does not exist: {project_dir}")
-        interactive_session = self.sessions.mark_completed(session_id)
+        self._validate_project_dir(project_dir)
+        interactive_session = self.sessions.get(session_id)
         transcript_path = Path(interactive_session.transcript_ref)
-        transcript = (
-            transcript_path.read_text(encoding="utf-8") if transcript_path.exists() else ""
-        )
+        transcript = self._read_optional_transcript(transcript_path)
         run = self.runs.transition(interactive_session.run_id, "larv_full_completed")
-        blueprint = ingest_project_artifacts(project_dir=project_dir, transcript=transcript)
+        try:
+            blueprint = ingest_project_artifacts(project_dir=project_dir, transcript=transcript)
+        except ArtifactValidationError:
+            raise
+        except Exception as error:
+            raise ArtifactValidationError(
+                code="artifact_ingestion_failed",
+                message=f"Unable to ingest generated project artifacts: {error}",
+                path=str(project_dir),
+            ) from error
         run = self.runs.transition(
             run.id,
             "larv_artifacts_ingested",
@@ -320,6 +327,7 @@ class NewProjectWorkflowService:
             {"session_id": session_id, "candidate_id": candidate.id},
             run_id=run.id,
         )
+        interactive_session = self.sessions.mark_completed(session_id)
         return NewProjectWorkflowResult(run=run, interactive_session=interactive_session)
 
     def record_larv_skill_failed(
@@ -347,3 +355,37 @@ class NewProjectWorkflowService:
             if run is None:
                 raise ValueError(f"Run not found: {run_id}")
             return run
+
+    def _validate_project_dir(self, project_dir: Path) -> None:
+        if not project_dir.exists():
+            raise ArtifactValidationError(
+                code="project_dir_missing",
+                message=f"Project directory does not exist: {project_dir}",
+                path=str(project_dir),
+            )
+        if not project_dir.is_dir():
+            raise ArtifactValidationError(
+                code="project_dir_not_directory",
+                message=f"Project path is not a directory: {project_dir}",
+                path=str(project_dir),
+            )
+        try:
+            next(project_dir.iterdir(), None)
+        except OSError as error:
+            raise ArtifactValidationError(
+                code="project_dir_not_readable",
+                message=f"Project directory is not readable by Hermes Core: {error}",
+                path=str(project_dir),
+            ) from error
+
+    def _read_optional_transcript(self, transcript_path: Path) -> str:
+        if not transcript_path.exists():
+            return ""
+        try:
+            return transcript_path.read_text(encoding="utf-8")
+        except OSError as error:
+            raise ArtifactValidationError(
+                code="transcript_not_readable",
+                message=f"Transcript file is not readable by Hermes Core: {error}",
+                path=str(transcript_path),
+            ) from error

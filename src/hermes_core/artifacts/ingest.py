@@ -3,6 +3,8 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from hermes_core.artifacts.errors import ArtifactValidationError
+
 
 class HermesProjectBlueprint(BaseModel):
     project_name: str
@@ -29,7 +31,14 @@ def ingest_project_artifacts(project_dir: Path, transcript: str) -> HermesProjec
 def _detect_package_manager(project_dir: Path) -> str | None:
     package_json = project_dir / "package.json"
     if package_json.exists():
-        data = json.loads(package_json.read_text(encoding="utf-8"))
+        try:
+            data = json.loads(package_json.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise ArtifactValidationError(
+                code="artifact_ingestion_failed",
+                message=f"Unable to read generated package.json: {error}",
+                path=str(package_json),
+            ) from error
         package_manager = data.get("packageManager")
         if isinstance(package_manager, str) and package_manager:
             return package_manager.split("@", maxsplit=1)[0]

@@ -177,7 +177,77 @@ def test_larv_skill_completion_validates_artifact_path(tmp_path, monkeypatch):
     )
 
     assert response.status_code == 400
-    assert "project_dir does not exist" in response.json()["detail"]
+    assert response.json()["detail"] == {
+        "code": "project_dir_missing",
+        "message": f"Project directory does not exist: {tmp_path / 'missing'}",
+        "path": str(tmp_path / "missing"),
+    }
+
+
+def test_larv_skill_completion_rejects_file_artifact_path(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_DATABASE_URL", f"sqlite:///{tmp_path / 'hermes.db'}")
+    monkeypatch.setenv("HERMES_DTT_AI_SHARED_TOKEN", "secret-token")
+    client = TestClient(create_app())
+    headers = {"X-Hermes-Token": "secret-token"}
+    artifact_file = tmp_path / "artifact.txt"
+    artifact_file.write_text("not a directory", encoding="utf-8")
+    started = client.post(
+        "/workflows/new-project/larv-skill/session-started",
+        headers=headers,
+        json={
+            "event_id": "event-start",
+            "project_name": "AeroTrack",
+            "external_session_id": "dtt-session-123",
+            "cwd": str(tmp_path),
+        },
+    ).json()
+    session_id = started["interactive_session"]["id"]
+
+    response = client.post(
+        f"/workflows/new-project/larv-skill/{session_id}/completed",
+        headers=headers,
+        json={
+            "event_id": "event-complete",
+            "project_dir": str(artifact_file),
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "project_dir_not_directory"
+
+
+def test_larv_skill_completion_reports_ingestion_error(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_DATABASE_URL", f"sqlite:///{tmp_path / 'hermes.db'}")
+    monkeypatch.setenv("HERMES_DTT_AI_SHARED_TOKEN", "secret-token")
+    client = TestClient(create_app())
+    headers = {"X-Hermes-Token": "secret-token"}
+    project = tmp_path / "AeroTrack"
+    project.mkdir()
+    (project / "package.json").write_text("{invalid json", encoding="utf-8")
+    started = client.post(
+        "/workflows/new-project/larv-skill/session-started",
+        headers=headers,
+        json={
+            "event_id": "event-start",
+            "project_name": "AeroTrack",
+            "external_session_id": "dtt-session-123",
+            "cwd": str(project),
+        },
+    ).json()
+    session_id = started["interactive_session"]["id"]
+
+    response = client.post(
+        f"/workflows/new-project/larv-skill/{session_id}/completed",
+        headers=headers,
+        json={
+            "event_id": "event-complete",
+            "project_dir": str(project),
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "artifact_ingestion_failed"
+    assert response.json()["detail"]["path"] == str(project / "package.json")
 
 
 def test_larv_skill_failure_endpoint_marks_run_failed(tmp_path, monkeypatch):
