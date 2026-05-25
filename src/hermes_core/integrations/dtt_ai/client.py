@@ -170,6 +170,14 @@ class DttAiHermesClient:
             },
         )
 
+    def get_session_status(self, *, session_id: str, event_limit: int = 10) -> dict[str, Any]:
+        response = self._client.get(
+            f"/workflows/new-project/larv-skill/{session_id}/status",
+            params={"event_limit": event_limit},
+        )
+        response.raise_for_status()
+        return response.json()
+
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         response = self._client.post(path, json=payload)
         response.raise_for_status()

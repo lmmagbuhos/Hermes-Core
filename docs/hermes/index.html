@@ -251,7 +251,7 @@
         <a href="#10-dtt-ai-larv-skill-contract">DTT-AI Larv Skill Contract</a>
         <a href="#11-dtt-ai-handoff">DTT-AI Handoff</a>
       </nav>
-      <p class="meta">Generated 2026-05-25T01:19:16.175Z from docs/hermes/*.md.</p>
+      <p class="meta">Generated 2026-05-25T01:29:16.617Z from docs/hermes/*.md.</p>
     </aside>
     <main>
       <section class="hero" aria-labelledby="page-title">
@@ -1204,6 +1204,8 @@ Hermes does not re-append duplicate output chunks when event_id is replayed.</co
 4. POST /workflows/new-project/larv-skill/{session_id}/human-answer
 5. Repeat output, prompt-shown, and human-answer as needed
 6. POST /workflows/new-project/larv-skill/{session_id}/completed</code></pre>
+<p>DTT-AI can poll or reload session state at any time with:</p>
+<pre><code>GET /workflows/new-project/larv-skill/{session_id}/status</code></pre>
 <p>If the <code>larv:full</code> skill crashes, is cancelled, or cannot continue, call:</p>
 <pre><code>POST /workflows/new-project/larv-skill/{session_id}/failed</code></pre>
 <p>Hermes returns its own <code>interactive_session.id</code>. Use that value as <code>{session_id}</code> in later calls.</p>
@@ -1433,6 +1435,48 @@ reason
 <p>Response state:</p>
 <pre><code>run.state = failed
 interactive_session.status = recovery_required</code></pre>
+<h2 id="10-dtt-ai-larv-skill-contract-7-status">7. Status</h2>
+<p>Call this when DTT-AI needs to render a status card, recover after a browser reload, or inspect the latest Hermes-side state.</p>
+<pre><code>GET /workflows/new-project/larv-skill/{session_id}/status?event_limit=10
+X-Hermes-Token: &lt;shared-token&gt;</code></pre>
+<p>Response:</p>
+<pre><code>{
+  &quot;run&quot;: {
+    &quot;id&quot;: 1,
+    &quot;workflow_type&quot;: &quot;new_project_creation&quot;,
+    &quot;state&quot;: &quot;project_context_candidate_created&quot;,
+    &quot;payload&quot;: {}
+  },
+  &quot;interactive_session&quot;: {
+    &quot;id&quot;: &quot;sess_abc&quot;,
+    &quot;run_id&quot;: 1,
+    &quot;command&quot;: [&quot;skill:larv:full&quot;],
+    &quot;cwd&quot;: &quot;/home/projects/AeroTrack&quot;,
+    &quot;status&quot;: &quot;completed&quot;,
+    &quot;last_prompt&quot;: &quot;Which backend stack should be used?&quot;,
+    &quot;transcript_ref&quot;: &quot;/home/projects/AeroTrack/.hermes/transcripts/run_1.log&quot;,
+    &quot;prompt_history&quot;: [],
+    &quot;stdin_history&quot;: []
+  },
+  &quot;events&quot;: [
+    {
+      &quot;id&quot;: 12,
+      &quot;type&quot;: &quot;larv.skill_session_completed&quot;,
+      &quot;payload&quot;: {
+        &quot;session_id&quot;: &quot;sess_abc&quot;,
+        &quot;candidate_id&quot;: 1
+      },
+      &quot;created_at&quot;: &quot;2026-05-25T00:00:00+00:00&quot;
+    }
+  ],
+  &quot;project_context_candidate&quot;: {
+    &quot;id&quot;: 1,
+    &quot;project_name&quot;: &quot;AeroTrack&quot;,
+    &quot;status&quot;: &quot;candidate&quot;,
+    &quot;blueprint&quot;: {}
+  }
+}</code></pre>
+<p>If the session ID is unknown, Hermes returns <code>404</code>.</p>
 <h2 id="10-dtt-ai-larv-skill-contract-artifact-access-requirement">Artifact Access Requirement</h2>
 <p>Hermes Core must be able to read <code>project_dir</code>.</p>
 <p>If DTT-AI and Hermes Core run on the same server, pass the local filesystem path.</p>
@@ -1558,7 +1602,8 @@ POST /workflows/new-project/larv-skill/{session_id}/output
 POST /workflows/new-project/larv-skill/{session_id}/prompt-shown
 POST /workflows/new-project/larv-skill/{session_id}/human-answer
 POST /workflows/new-project/larv-skill/{session_id}/completed
-POST /workflows/new-project/larv-skill/{session_id}/failed</code></pre>
+POST /workflows/new-project/larv-skill/{session_id}/failed
+GET  /workflows/new-project/larv-skill/{session_id}/status</code></pre>
 <p>The full request and response contract is in <code>10-dtt-ai-larv-skill-contract.md</code>.</p>
 <h2 id="11-dtt-ai-handoff-python-adapter">Python Adapter</h2>
 <p>Hermes Core includes a small Python adapter that DTT-AI can copy, vendor, or import when both projects share the same Python environment:</p>
@@ -1600,7 +1645,8 @@ with DttAiHermesClient(
     hermes.complete_session(
         session_id=session.id,
         project_dir=&quot;/home/dtt-ai/workspaces/AeroTrack&quot;,
-    )</code></pre>
+    )
+    status = hermes.get_session_status(session_id=session.id)</code></pre>
 <p>The client raises <code>httpx.HTTPStatusError</code> for Hermes error responses. DTT-AI should catch that exception, log the response body, and show the failure in the operator UI.</p>
 <h2 id="11-dtt-ai-handoff-idempotency-rules">Idempotency Rules</h2>
 <p>Every DTT-AI event should include <code>event_id</code>.</p>
@@ -1625,6 +1671,18 @@ is_required
 metadata.source = larv:full
 metadata.phase = &lt;detected larv phase when known&gt;</code></pre>
 <p>DTT-AI remains responsible for sending the answer to the actual running <code>larv:full</code> runtime. Hermes records the answer for audit, recovery, and future learning.</p>
+<h2 id="11-dtt-ai-handoff-status-and-reloads">Status and Reloads</h2>
+<p>DTT-AI should call <code>get_session_status</code> when rendering run status cards or recovering after a browser reload.</p>
+<p>The status response includes:</p>
+<pre><code>run.state
+interactive_session.status
+interactive_session.last_prompt
+interactive_session.prompt_history
+interactive_session.stdin_history
+interactive_session.transcript_ref
+recent events
+project_context_candidate when created</code></pre>
+<p>Use this endpoint for display and diagnostics. Do not use it as a replacement for sending lifecycle events; DTT-AI must still report output, prompts, answers, completion, and failure as they happen.</p>
 <h2 id="11-dtt-ai-handoff-artifact-requirement">Artifact Requirement</h2>
 <p>For <code>completed</code>, Hermes Core must be able to read <code>project_dir</code>.</p>
 <p>This works when DTT-AI and Hermes Core share the same filesystem or mounted storage.</p>
@@ -1690,6 +1748,7 @@ failure flow: session-started -&gt; failed</code></pre>
 [ ] Report human-answer after the answer is submitted.
 [ ] Report completed only when Hermes can read project_dir.
 [ ] Report failed when larv cannot continue.
+[ ] Use get_session_status for browser reloads and operator status cards.
 [ ] Surface Hermes 400/401/422 errors in DTT-AI operator logs.</code></pre>
 </article>
     </main>

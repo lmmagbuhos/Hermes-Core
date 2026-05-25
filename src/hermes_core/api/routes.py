@@ -10,7 +10,11 @@ from hermes_core.db import create_session_factory, init_db
 from hermes_core.idempotency.service import IdempotencyService
 from hermes_core.profiles.loader import load_profiles
 from hermes_core.runs.service import RunService
-from hermes_core.workflows.new_project import NewProjectWorkflowResult, NewProjectWorkflowService
+from hermes_core.workflows.new_project import (
+    NewProjectWorkflowResult,
+    NewProjectWorkflowService,
+    larv_skill_session_status_payload,
+)
 
 router = APIRouter()
 
@@ -398,3 +402,18 @@ def fail_larv_skill_session(
         run_id=result.run.id,
     )
     return payload
+
+
+@router.get("/workflows/new-project/larv-skill/{session_id}/status")
+def get_larv_skill_session_status(
+    session_id: str,
+    event_limit: int = 10,
+    x_hermes_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _require_dtt_ai_token(x_hermes_token)
+    service = _workflow_service()
+    try:
+        status = service.get_larv_skill_session_status(session_id, event_limit=event_limit)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return larv_skill_session_status_payload(status)

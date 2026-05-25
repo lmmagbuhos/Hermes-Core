@@ -57,6 +57,7 @@ POST /workflows/new-project/larv-skill/{session_id}/prompt-shown
 POST /workflows/new-project/larv-skill/{session_id}/human-answer
 POST /workflows/new-project/larv-skill/{session_id}/completed
 POST /workflows/new-project/larv-skill/{session_id}/failed
+GET  /workflows/new-project/larv-skill/{session_id}/status
 ```
 
 The full request and response contract is in `10-dtt-ai-larv-skill-contract.md`.
@@ -109,6 +110,7 @@ with DttAiHermesClient(
         session_id=session.id,
         project_dir="/home/dtt-ai/workspaces/AeroTrack",
     )
+    status = hermes.get_session_status(session_id=session.id)
 ```
 
 The client raises `httpx.HTTPStatusError` for Hermes error responses. DTT-AI should catch that exception, log the response body, and show the failure in the operator UI.
@@ -154,6 +156,25 @@ metadata.phase = <detected larv phase when known>
 ```
 
 DTT-AI remains responsible for sending the answer to the actual running `larv:full` runtime. Hermes records the answer for audit, recovery, and future learning.
+
+## Status and Reloads
+
+DTT-AI should call `get_session_status` when rendering run status cards or recovering after a browser reload.
+
+The status response includes:
+
+```text
+run.state
+interactive_session.status
+interactive_session.last_prompt
+interactive_session.prompt_history
+interactive_session.stdin_history
+interactive_session.transcript_ref
+recent events
+project_context_candidate when created
+```
+
+Use this endpoint for display and diagnostics. Do not use it as a replacement for sending lifecycle events; DTT-AI must still report output, prompts, answers, completion, and failure as they happen.
 
 ## Artifact Requirement
 
@@ -273,5 +294,6 @@ Expected summary:
 [ ] Report human-answer after the answer is submitted.
 [ ] Report completed only when Hermes can read project_dir.
 [ ] Report failed when larv cannot continue.
+[ ] Use get_session_status for browser reloads and operator status cards.
 [ ] Surface Hermes 400/401/422 errors in DTT-AI operator logs.
 ```

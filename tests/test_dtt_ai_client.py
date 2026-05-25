@@ -21,7 +21,8 @@ def test_client_sends_auth_header_and_larv_payloads():
     requests = []
 
     def handler(request: httpx.Request) -> httpx.Response:
-        requests.append((request, json.loads(request.content.decode("utf-8"))))
+        body = json.loads(request.content.decode("utf-8")) if request.content else {}
+        requests.append((request, body))
         if request.url.path.endswith("/session-started"):
             return httpx.Response(
                 200,
@@ -67,6 +68,7 @@ def test_client_sends_auth_header_and_larv_payloads():
     )
     client.record_human_answer(session_id=session.id, prompt_id="stack", answer="Fastify")
     client.complete_session(session_id=session.id, project_dir="/srv/dtt-ai/AeroTrack")
+    client.get_session_status(session_id=session.id, event_limit=5)
 
     assert session.id == "sess_123"
     assert session.run_id == 4
@@ -77,12 +79,14 @@ def test_client_sends_auth_header_and_larv_payloads():
         "/workflows/new-project/larv-skill/sess_123/prompt-shown",
         "/workflows/new-project/larv-skill/sess_123/human-answer",
         "/workflows/new-project/larv-skill/sess_123/completed",
+        "/workflows/new-project/larv-skill/sess_123/status",
     ]
     assert requests[0][1]["event_id"] == "dtt-session-123-started"
     assert requests[1][1]["event_id"] == "dtt-session-123-output-000001"
     assert requests[2][1]["event_id"] == "dtt-session-123-prompt-stack"
     assert requests[3][1]["event_id"] == "dtt-session-123-answer-stack"
     assert requests[4][1]["event_id"] == "dtt-session-123-completed"
+    assert requests[5][0].url.params["event_limit"] == "5"
 
 
 def test_client_raises_for_hermes_error_response():

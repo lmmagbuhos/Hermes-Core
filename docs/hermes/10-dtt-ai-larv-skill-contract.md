@@ -70,6 +70,12 @@ DTT-AI should call the endpoints in this order:
 6. POST /workflows/new-project/larv-skill/{session_id}/completed
 ```
 
+DTT-AI can poll or reload session state at any time with:
+
+```text
+GET /workflows/new-project/larv-skill/{session_id}/status
+```
+
 If the `larv:full` skill crashes, is cancelled, or cannot continue, call:
 
 ```text
@@ -419,6 +425,58 @@ Response state:
 run.state = failed
 interactive_session.status = recovery_required
 ```
+
+## 7. Status
+
+Call this when DTT-AI needs to render a status card, recover after a browser reload, or inspect the latest Hermes-side state.
+
+```http
+GET /workflows/new-project/larv-skill/{session_id}/status?event_limit=10
+X-Hermes-Token: <shared-token>
+```
+
+Response:
+
+```json
+{
+  "run": {
+    "id": 1,
+    "workflow_type": "new_project_creation",
+    "state": "project_context_candidate_created",
+    "payload": {}
+  },
+  "interactive_session": {
+    "id": "sess_abc",
+    "run_id": 1,
+    "command": ["skill:larv:full"],
+    "cwd": "/home/projects/AeroTrack",
+    "status": "completed",
+    "last_prompt": "Which backend stack should be used?",
+    "transcript_ref": "/home/projects/AeroTrack/.hermes/transcripts/run_1.log",
+    "prompt_history": [],
+    "stdin_history": []
+  },
+  "events": [
+    {
+      "id": 12,
+      "type": "larv.skill_session_completed",
+      "payload": {
+        "session_id": "sess_abc",
+        "candidate_id": 1
+      },
+      "created_at": "2026-05-25T00:00:00+00:00"
+    }
+  ],
+  "project_context_candidate": {
+    "id": 1,
+    "project_name": "AeroTrack",
+    "status": "candidate",
+    "blueprint": {}
+  }
+}
+```
+
+If the session ID is unknown, Hermes returns `404`.
 
 ## Artifact Access Requirement
 

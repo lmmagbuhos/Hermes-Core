@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
 
 from hermes_core.artifacts.errors import ArtifactValidationError
 from hermes_core.artifacts.ingest import ingest_project_artifacts
 from hermes_core.events.service import EventService
-from hermes_core.models import InteractiveSessionRecord, Run
+from hermes_core.models import Event, InteractiveSessionRecord, ProjectContextCandidate, Run
 from hermes_core.projects.service import ProjectContextCandidateService
 from hermes_core.runtime.interactive import InteractiveRuntime, RuntimeReadResult
 from hermes_core.runs.service import RunService
@@ -17,6 +18,14 @@ from hermes_core.sessions.service import InteractiveSessionService
 class NewProjectWorkflowResult:
     run: Run
     interactive_session: InteractiveSessionRecord
+
+
+@dataclass(frozen=True)
+class LarvSkillSessionStatus:
+    run: Run
+    interactive_session: InteractiveSessionRecord
+    events: list[Event]
+    project_context_candidate: ProjectContextCandidate | None
 
 
 class NewProjectWorkflowService:
@@ -349,6 +358,45 @@ class NewProjectWorkflowService:
         )
         return NewProjectWorkflowResult(run=run, interactive_session=interactive_session)
 
+    def get_larv_skill_session_status(
+        self,
+        session_id: str,
+        *,
+        event_limit: int = 10,
+    ) -> LarvSkillSessionStatus:
+        with self.session_factory() as db:
+            interactive_session = db.get(InteractiveSessionRecord, session_id)
+            if interactive_session is None:
+                raise ValueError(f"Interactive session not found: {session_id}")
+            run = db.get(Run, interactive_session.run_id)
+            if run is None:
+                raise ValueError(f"Run not found: {interactive_session.run_id}")
+            events = (
+                db.query(Event)
+                .filter(Event.run_id == run.id)
+                .order_by(Event.id.desc())
+                .limit(event_limit)
+                .all()
+            )
+            candidate = (
+                db.query(ProjectContextCandidate)
+                .filter(ProjectContextCandidate.run_id == run.id)
+                .order_by(ProjectContextCandidate.id.desc())
+                .first()
+            )
+            db.expunge(interactive_session)
+            db.expunge(run)
+            for event in events:
+                db.expunge(event)
+            if candidate is not None:
+                db.expunge(candidate)
+            return LarvSkillSessionStatus(
+                run=run,
+                interactive_session=interactive_session,
+                events=list(reversed(events)),
+                project_context_candidate=candidate,
+            )
+
     def _get_run(self, run_id: int) -> Run:
         with self.session_factory() as db:
             run = db.get(Run, run_id)
@@ -389,3 +437,44 @@ class NewProjectWorkflowService:
                 message=f"Transcript file is not readable by Hermes Core: {error}",
                 path=str(transcript_path),
             ) from error
+
+
+def larv_skill_session_status_payload(status: LarvSkillSessionStatus) -> dict[str, Any]:
+    return {
+        "run": {
+            "id": status.run.id,
+            "workflow_type": status.run.workflow_type,
+            "state": status.run.state,
+            "payload": status.run.payload,
+        },
+        "interactive_session": {
+            "id": status.interactive_session.id,
+            "run_id": status.interactive_session.run_id,
+            "command": status.interactive_session.command,
+            "cwd": status.interactive_session.cwd,
+            "status": status.interactive_session.status,
+            "last_prompt": status.interactive_session.last_prompt,
+            "transcript_ref": status.interactive_session.transcript_ref,
+            "prompt_history": status.interactive_session.prompt_history or [],
+            "stdin_history": status.interactive_session.stdin_history or [],
+        },
+        "events": [
+            {
+                "id": event.id,
+                "type": event.type,
+                "payload": event.payload,
+                "created_at": event.created_at.isoformat(),
+            }
+            for event in status.events
+        ],
+        "project_context_candidate": (
+            {
+                "id": status.project_context_candidate.id,
+                "project_name": status.project_context_candidate.project_name,
+                "status": status.project_context_candidate.status,
+                "blueprint": status.project_context_candidate.blueprint,
+            }
+            if status.project_context_candidate is not None
+            else None
+        ),
+    }
