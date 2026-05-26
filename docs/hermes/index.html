@@ -250,8 +250,18 @@
         <a href="#09-interactive-session-resume">Resumable Interactive Sessions</a>
         <a href="#10-dtt-ai-larv-skill-contract">DTT-AI Larv Skill Contract</a>
         <a href="#11-dtt-ai-handoff">DTT-AI Handoff</a>
+        <a href="#12-dtt-ai-runtime-bridge-spike">DTT-AI Runtime Bridge Spike Prompt</a>
+        <a href="#13-dtt-ai-request-user-input-resolution">DTT-AI Request User Input Resolution Prompt</a>
+        <a href="#14-dtt-ai-ssh-tmux-runtime-spike">DTT-AI SSH/tmux Runtime Spike Prompt</a>
+        <a href="#15-dtt-ai-ssh-host-resolution">DTT-AI SSH Host Resolution Prompt</a>
+        <a href="#16-dtt-ai-final-tmux-prompt-answer-proof">DTT-AI Final SSH/tmux Prompt-Answer Proof Prompt</a>
+        <a href="#17-dtt-ai-hermes-lifecycle-wrapping">DTT-AI Hermes Lifecycle Wrapping Prompt</a>
+        <a href="#18-dtt-ai-new-project-page">DTT-AI New Project Page Prompt</a>
+        <a href="#19-dtt-ai-new-project-proxy-fix">DTT-AI New Project Proxy Fix Prompt</a>
+        <a href="#20-dtt-ai-runtime-test-report-capture">DTT-AI Runtime Test Report Capture Prompt</a>
+        <a href="#21-scenario-a-checkpoint">Scenario A Checkpoint</a>
       </nav>
-      <p class="meta">Generated 2026-05-25T01:29:16.617Z from docs/hermes/*.md.</p>
+      <p class="meta">Generated 2026-05-26T04:11:10.840Z from docs/hermes/*.md.</p>
     </aside>
     <main>
       <section class="hero" aria-labelledby="page-title">
@@ -453,6 +463,9 @@ DTT-AI or the agent runtime invokes larv:full.
 Hermes Core records the session, receives output/input/completion events, ingests
 artifacts, and creates ProjectContextCandidate.</code></pre>
 <h2 id="02-new-project-workflow-workflow">Workflow</h2>
+<p>Core runtime status:</p>
+<pre><code>The browser-to-runtime loop is proven:
+DTT-AI New Project page -&gt; SSH/tmux -&gt; codex --yolo -&gt; larv:full -&gt; human answer through DTT-AI -&gt; same session continues.</code></pre>
 <pre><code>1. Request received
 2. Hermes-Triage normalization
 3. Hermes-Manager policy check
@@ -976,6 +989,7 @@ hermes-core stores and governs them.</code></pre>
 <h1 id="08-first-proof-of-concept-first-proof-of-concept">First Proof of Concept</h1>
 <p>The first proof must execute real workflows. It must not be a fake MVP, simulated bot demo, or UI-only prototype.</p>
 <h2 id="08-first-proof-of-concept-poc-a-new-project-creation">POC A: New Project Creation</h2>
+<p>Status: <strong>Core runtime loop proven on 2026-05-26.</strong></p>
 <p>Goal:</p>
 <pre><code>Use DTT-AI/agent runtime to invoke the real larv:full skill while Hermes records
 the session, ingests the result, validates it, and creates a permanent project
@@ -996,6 +1010,23 @@ agent.</code></pre>
 13. Permanent Hermes-{projectName} is created after validation.
 14. Learning candidates are created.
 15. Completion report is produced.</code></pre>
+<p>Proven so far:</p>
+<pre><code>DTT-AI New Project page starts a real SSH/tmux Codex session.
+Codex runs in YOLO mode inside the remote project directory.
+DTT-AI invokes larv:full as the accepted plain-text Codex skill trigger.
+DTT-AI displays real larv output in the browser.
+larv asks a real workflow question.
+The human answers through the DTT-AI browser UI.
+DTT-AI sends the answer through the backend answer endpoint.
+The same tmux/Codex session continues after the answer.
+larv creates docs/larv/STATE.yaml and produces website/sandbox output.
+Hermes lifecycle reporting is wrapped around the proven runtime path behind HERMES_ENABLED=true.</code></pre>
+<p>Remaining POC A productization:</p>
+<pre><code>durable New Project session persistence
+project cards and reconnect/resume behavior
+operator UX polish for question display, output filtering, loading states, and runtime details
+final operator documentation
+full completion-to-ProjectContextCandidate smoke with Hermes enabled when quota allows</code></pre>
 <p>This proves:</p>
 <pre><code>interactive project discovery
 real larv skill invocation through DTT-AI/agent runtime
@@ -1576,6 +1607,60 @@ def on_larv_failed(reason: str):
 <p>DTT-AI owns the actual <code>larv:full</code> skill invocation and the human-facing terminal UI.</p>
 <p>Hermes Core owns durable workflow state, transcript storage, prompt and answer audit history, artifact ingestion, and ProjectContextCandidate creation.</p>
 <p>Hermes Core does not call <code>larv:full</code> directly.</p>
+<h2 id="11-dtt-ai-handoff-current-runtime-direction">Current Runtime Direction</h2>
+<p>The preferred DTT-AI runtime bridge for Scenario A is now an SSH/tmux-backed Codex terminal session.</p>
+<p>It should mirror the real manual workflow:</p>
+<pre><code>ssh dev
+mkdir &lt;project-name&gt;
+cd &lt;project-name&gt;
+codex --yolo
+invoke larv:full inside the Codex session
+answer larv prompts inside the same session</code></pre>
+<p>DTT-AI should automate that workflow from the backend:</p>
+<pre><code>1. SSH to the dev/Contabo server.
+2. Create the project workspace directory.
+3. Start a persistent tmux session in that directory.
+4. Run codex --yolo inside tmux.
+5. Send the larv:full trigger into that Codex session.
+6. Capture tmux output for the browser.
+7. Send human answers back into the same tmux session.
+8. Report lifecycle events to Hermes Core.</code></pre>
+<p>Codex app-server was investigated as a runtime candidate, but it hit <code>request_user_input is unavailable in Default mode</code>. Keep that work as research only unless SSH/tmux fails.</p>
+<p>Current DTT-AI spike evidence:</p>
+<pre><code>LARV_REMOTE_HOST=localhost works for same-server SSH.
+BatchMode SSH works for the claude-team process user after authorizing its public key.
+tmux is available at /usr/bin/tmux.
+codex is available and reports codex-cli 0.131.0.
+codex --yolo starts inside tmux.
+The accepted larv trigger in this Codex TUI is larv:full, not /larv:full.
+larv pre-flight created docs/larv/STATE.yaml in the remote project directory.</code></pre>
+<p>Use this environment for same-server testing:</p>
+<pre><code>LARV_REMOTE_HOST=localhost
+LARV_REMOTE_BASE_DIR=/tmp/dtt-ai-larv-projects
+LARV_TMUX_PREFIX=dtt_ai_larv
+LARV_CODEX_COMMAND='codex --yolo'
+LARV_TRIGGER='larv:full'</code></pre>
+<p>Final runtime proof status:</p>
+<pre><code>real larv question -&gt; human answer submitted through DTT-AI backend answer endpoint -&gt; same tmux/Codex session continues</code></pre>
+<p>This is now proven.</p>
+<p>Successful proof details:</p>
+<pre><code>LARV_REMOTE_HOST=localhost
+LARV_TRIGGER='larv:full'
+DTT-AI answer endpoint: POST /api/larv-runtime-probe/:sessionId/answers
+remote artifact: docs/larv/STATE.yaml</code></pre>
+<p>The final proof showed:</p>
+<pre><code>larv asked: &quot;Who knows this domain best...&quot;
+DTT-AI submitted an answer through the backend endpoint.
+The same tmux/Codex session continued and asked the next larv question.</code></pre>
+<p>The SSH/tmux runtime is ready to be wrapped with Hermes lifecycle reporting.</p>
+<p>Backend Hermes wrapping status:</p>
+<pre><code>DTT-AI implemented HermesReportingLarvRuntime around TmuxSshLarvRuntime.
+Hermes reporting is opt-in with HERMES_ENABLED=true.
+The wrapper reports session-started, output, prompt-shown, human-answer, failed, completed, and status.
+Runtime behavior remains unchanged.
+Unit tests and ai-service build pass.</code></pre>
+<p>Current next DTT-AI phase:</p>
+<pre><code>Add a separate New Project tab/page that uses the proven backend runtime and Hermes wrapper without disturbing the existing chat flow.</code></pre>
 <h2 id="11-dtt-ai-handoff-environment">Environment</h2>
 <p>Hermes Core:</p>
 <pre><code>HERMES_DATABASE_URL=sqlite:///./hermes.db
@@ -1750,6 +1835,1165 @@ failure flow: session-started -&gt; failed</code></pre>
 [ ] Report failed when larv cannot continue.
 [ ] Use get_session_status for browser reloads and operator status cards.
 [ ] Surface Hermes 400/401/422 errors in DTT-AI operator logs.</code></pre>
+</article>
+      <article class="doc" id="12-dtt-ai-runtime-bridge-spike" data-source="12-dtt-ai-runtime-bridge-spike.md">
+<h1 id="12-dtt-ai-runtime-bridge-spike-dtt-ai-runtime-bridge-spike-prompt">DTT-AI Runtime Bridge Spike Prompt</h1>
+<p>&gt; <strong>Status: Superseded / research-only.</strong> &gt; &gt; This prompt explored Codex app-server as the first runtime bridge candidate. That was useful research, but the current preferred direction is now the SSH/tmux-backed Codex terminal workflow described in <code>14-dtt-ai-ssh-tmux-runtime-spike.md</code>. &gt; &gt; Reason: the real manual workflow is <code>ssh dev -&gt; mkdir project -&gt; codex --yolo -&gt; invoke larv:full inside the Codex session -&gt; answer prompts in that same session</code>. The app-server spike hit <code>request_user_input is unavailable in Default mode</code>, while the SSH/tmux direction matches the proven human workflow and does not require structured app-server prompt events.</p>
+<p>Use this prompt inside the DTT-AI project agent.</p>
+<pre><code>You are working inside the DTT-AI project.
+
+DTT-AI’s current repo does not yet have the runtime bridge required to invoke a real long-running `larv:full` session. Hermes Core is ready enough for Scenario A, but DTT-AI still needs the live runtime layer that produces real output, prompt, answer, completion, and failure events.
+
+Your next task is not Hermes integration and not the full frontend UI.
+
+Your next task is a backend-only Codex app-server runtime bridge spike for `larv:full`.
+
+Do not build the frontend yet.
+Do not connect Hermes yet except through placeholder interfaces.
+Do not fake `larv:full`.
+Do not simulate prompts or generated artifacts.
+
+Goal:
+Prove DTT-AI can start a real `larv:full` session, observe output, surface one human prompt, submit an answer, and detect completion/failure.
+
+Recommended files:
+- `apps/ai-service/src/services/larvRuntime/types.ts`
+- `apps/ai-service/src/services/larvRuntime/codexAppServerRuntime.ts`
+- `apps/ai-service/src/routes/larvRuntimeProbe.ts`
+
+Runtime interface:
+- `startLarvFull({ projectName, workspaceDir })`
+- `submitAnswer(sessionId, promptId, answer)`
+- `getStatus(sessionId)`
+- `cancel(sessionId)`
+
+Implementation direction:
+Use Codex app-server as the first runtime candidate.
+
+Why:
+- It is closer to the actual agent/skill runtime than shell/PTY scraping.
+- It may expose structured notifications.
+- It may support human input requests cleanly.
+- It avoids pretending `larv:full` is a CLI command.
+
+Known Codex app-server capabilities to investigate:
+- `thread/start`
+- `turn/start`
+- `turn/steer`
+- streamed notifications such as `item/agentMessage/delta`
+- completion notifications such as `turn/completed`
+- human prompt requests such as `item/tool/requestUserInput`
+
+Relevant generated schema may exist under:
+`/tmp/codex-app-schema`
+
+Check types such as:
+- `ThreadStartParams`
+- `TurnStartParams`
+- `ToolRequestUserInputParams`
+
+The spike must verify:
+1. Codex app-server can start from the DTT-AI backend environment.
+2. `larv:full` skill is visible.
+3. A thread can start with `cwd = scratch workspace`.
+4. A turn can start with an explicit instruction to run real `larv:full`.
+5. Output can be streamed or collected incrementally.
+6. Prompt/input requests can be detected.
+7. A human answer can be sent back into the same session/thread.
+8. Completion/failure can be detected.
+9. A real project directory/artifact path exists after completion.
+
+If `request_user_input` events are emitted:
+- map them to pending DTT-AI prompts,
+- store `prompt_id`,
+- allow `submitAnswer(sessionId, promptId, answer)` to answer the same runtime request.
+
+If `request_user_input` events are not emitted:
+- determine whether `larv:full` asks questions as normal assistant text,
+- document whether continuation turns can answer those questions in the same Codex thread,
+- do not mark the bridge solved until one real prompt-answer cycle is proven.
+
+Expected route for the spike:
+- Add a backend-only probe route, for example:
+  - `POST /api/larv-runtime-probe/start`
+  - `POST /api/larv-runtime-probe/:sessionId/answers`
+  - `GET /api/larv-runtime-probe/:sessionId/status`
+
+The route can be ugly and internal-only for the spike. It does not need production UI polish.
+
+The route must not fake events. It must expose what the real runtime produces.
+
+Session registry:
+- In-memory is acceptable for the spike.
+- Before production, use persistent storage because the current DigitalOcean service can restart.
+
+Important deployment constraints:
+- Current deployed DTT-AI appears to be a single DigitalOcean web service.
+- Long-running agent sessions require Codex auth/config/skills to exist in that environment.
+- The deployment must permit long-lived child processes or a persistent app-server connection.
+- If those conditions are not true, report that as a blocker.
+
+Fallback:
+Do not use raw PTY/TUI scraping unless Codex app-server fails.
+
+Raw PTY/tmux/screen is a fallback only because it is more brittle and harder to recover after restarts. If Codex app-server fails, document exactly why before proposing PTY fallback.
+
+Deliverables:
+1. Where the runtime bridge lives in DTT-AI.
+2. Whether Codex app-server is viable.
+3. Exact commands used to start the probe.
+4. Logs from one real run or the precise failure preventing one.
+5. Whether `larv:full` appears as an available skill.
+6. Whether a prompt can be surfaced and answered.
+7. Whether generated artifacts exist after completion.
+8. Blockers and required environment changes.
+9. A recommendation: proceed with Codex app-server, fall back to PTY, or pause because the runtime cannot be invoked from DTT-AI.
+
+Do not implement Hermes HTTP reporting yet.
+
+Only after this runtime spike proves a real `larv:full` prompt-answer-completion cycle should DTT-AI proceed to:
+1. Wrap the runtime with Hermes lifecycle reporting.
+2. Add backend larv session routes.
+3. Add SSE/live browser streaming.
+4. Add the New Project frontend page.
+5. Connect final completion to Hermes Core.</code></pre>
+</article>
+      <article class="doc" id="13-dtt-ai-request-user-input-resolution" data-source="13-dtt-ai-request-user-input-resolution.md">
+<h1 id="13-dtt-ai-request-user-input-resolution-dtt-ai-request-user-input-resolution-prompt">DTT-AI Request User Input Resolution Prompt</h1>
+<p>&gt; <strong>Status: Superseded / research-only.</strong> &gt; &gt; This prompt focused on unblocking Codex app-server structured <code>request_user_input</code>. That investigation is no longer the primary path for Scenario A. &gt; &gt; Current direction: DTT-AI should first prove an SSH/tmux-backed Codex terminal session that mirrors the real manual workflow: <code>ssh dev</code>, create the project directory, start <code>codex --yolo</code>, invoke <code>larv:full</code> inside that Codex session, capture output, and send human answers back into the same persistent session. &gt; &gt; Use <code>14-dtt-ai-ssh-tmux-runtime-spike.md</code> for the current prompt.</p>
+<p>Use this prompt inside the DTT-AI project agent.</p>
+<pre><code>You are working inside the DTT-AI project.
+
+The runtime bridge spike successfully proved that Codex app-server can start, `larv:full` is visible, real output streams, and real larv pre-flight artifacts are created.
+
+However, the runtime bridge is not complete because structured prompt handling failed with:
+
+`request_user_input is unavailable in Default mode`
+
+Your next task is to resolve this blocker.
+
+Do not implement Hermes lifecycle reporting yet.
+Do not build the New Project frontend yet.
+Do not fake prompt-answer behavior.
+
+Goal:
+Determine whether Codex app-server can run `larv:full` in a mode where `request_user_input` is available, or prove that it cannot.
+
+Investigate:
+1. What Codex runtime mode enables `request_user_input`?
+2. Is there a Plan mode or interactive mode parameter in Codex app-server `thread/start`, `turn/start`, or tool configuration?
+3. Does Codex app-server expose `request_user_input` only under certain tool permissions?
+4. Can the app-server session be initialized with a mode/profile/toolset that includes `request_user_input`?
+5. Is this limitation coming from the Codex CLI, the app-server protocol, the model mode, or the skill invocation context?
+6. Is there a documented or schema-visible way to respond to server tool requests from app-server?
+7. Can a minimal non-larv prompt intentionally trigger `request_user_input` in the same app-server mode?
+
+Required experiment:
+1. Start Codex app-server.
+2. Start a thread in the same way as the larv spike.
+3. Run a minimal instruction that should ask for human input using `request_user_input`.
+4. Try all reasonable mode/tool/session parameters discoverable in schema or local Codex config.
+5. Record which modes are accepted and which fail.
+
+If `request_user_input` can be enabled:
+1. Update `codexAppServerRuntime.ts` to use the correct mode/config.
+2. Prove one real `larv:full` prompt appears as a structured prompt.
+3. Prove `submitAnswer(sessionId, promptId, answer)` answers the same runtime request.
+
+If `request_user_input` cannot be enabled:
+1. Implement and prove the fallback model:
+   - detect larv questions from assistant text/output,
+   - mark the runtime session as waiting for input,
+   - accept an answer through `submitAnswer`,
+   - continue the same Codex thread with a later `turn/start` containing the answer,
+   - prove the same larv workflow continues after the answer.
+2. This fallback must still use the real Codex thread and real `larv:full`; do not simulate the workflow.
+
+Deliverables:
+1. Root cause of `request_user_input is unavailable in Default mode`.
+2. Whether there is a working mode/config to enable it.
+3. If yes, logs from one real structured prompt-answer cycle.
+4. If no, logs from one real fallback prompt-answer continuation cycle.
+5. Exact files changed.
+6. Test results.
+7. Whether the runtime bridge is now ready for Hermes lifecycle reporting.</code></pre>
+</article>
+      <article class="doc" id="14-dtt-ai-ssh-tmux-runtime-spike" data-source="14-dtt-ai-ssh-tmux-runtime-spike.md">
+<h1 id="14-dtt-ai-ssh-tmux-runtime-spike-dtt-ai-ssh-tmux-runtime-spike-prompt">DTT-AI SSH/tmux Runtime Spike Prompt</h1>
+<p>Use this prompt inside the DTT-AI project agent.</p>
+<pre><code>You are working inside the DTT-AI project.
+
+Context:
+DTT-AI and Hermes Core are separate projects.
+
+Hermes Core is already ready enough for Scenario A reporting. It can receive:
+- session-started
+- output
+- prompt-shown
+- human-answer
+- completed
+- failed
+- status
+
+But DTT-AI still needs the real runtime bridge that produces those events.
+
+Important correction:
+The preferred runtime direction is no longer Codex app-server.
+
+Codex app-server was investigated and successfully proved that `larv:full` is visible and real larv pre-flight artifacts can be created, but it hit this blocker:
+
+`request_user_input is unavailable in Default mode`
+
+Keep the Codex app-server files as research for now, but do not continue building on that path for Scenario A unless SSH/tmux fails.
+
+Current source of truth:
+DTT-AI should automate the real manual workflow:
+
+1. SSH into the dev/Contabo server.
+2. Create a directory for the new project.
+3. `cd` into that directory.
+4. Start a persistent Codex session with `codex --yolo`.
+5. Invoke the `larv:full` skill inside that Codex session.
+6. Stream/display the Codex session output.
+7. When larv asks a question, let the human answer in DTT-AI.
+8. Send the human answer back into the same persistent Codex session.
+9. Continue until artifacts are generated or the session fails.
+
+Do not type `larv:full` into a plain shell and pretend it is an OS command.
+`larv:full` is a Codex skill trigger. The session must be a real Codex session.
+
+Recommended runtime strategy:
+Use SSH + tmux.
+
+Why tmux:
+- It mirrors the real manual server workflow.
+- It keeps the session alive if the browser disconnects.
+- It gives DTT-AI a stable session name to reconnect to.
+- DTT-AI can capture pane output.
+- DTT-AI can send answers back into the same running session.
+- It avoids the Codex app-server `request_user_input` blocker.
+
+Cleanup requirement:
+Before implementing the SSH/tmux spike, clean up or quarantine the previous Codex app-server runtime spike work so the codebase direction is not ambiguous.
+
+Do one of these:
+1. Remove the Codex app-server probe files if they are not needed.
+2. Or move/mark them clearly as research-only and unused by the active runtime path.
+
+Previous spike files that may need cleanup:
+- `apps/ai-service/src/services/larvRuntime/codexAppServerRuntime.ts`
+- `apps/ai-service/src/services/larvRuntime/codexAppServerRuntime.test.ts`
+- `apps/ai-service/src/routes/larvRuntimeProbe.ts`
+- `apps/ai-service/src/routes/larvRuntimeProbe.test.ts`
+- any route mounting added only for the app-server probe
+
+Do not leave DTT-AI with two competing runtime implementations unless one is clearly disabled/research-only.
+
+New implementation target:
+Build a backend-only SSH/tmux runtime spike.
+
+Recommended files:
+- `apps/ai-service/src/services/larvRuntime/types.ts`
+- `apps/ai-service/src/services/larvRuntime/tmuxSshLarvRuntime.ts`
+- `apps/ai-service/src/services/larvRuntime/tmuxSshLarvRuntime.test.ts`
+- `apps/ai-service/src/routes/larvRuntimeProbe.ts`
+- `apps/ai-service/src/routes/larvRuntimeProbe.test.ts`
+
+If `types.ts` already exists from the previous spike, reuse it if the interface still fits. Otherwise update it for the tmux model.
+
+Runtime interface:
+- `startLarvFull({ projectName, workspaceDir })`
+- `captureOutput(sessionId)`
+- `submitAnswer(sessionId, promptId, answer)`
+- `getStatus(sessionId)`
+- `cancel(sessionId)`
+
+The runtime should store:
+- DTT-AI session ID
+- remote tmux session name
+- remote project directory
+- output sequence number
+- last captured output
+- status: starting | running | waiting_for_input | completed | failed | cancelled
+
+SSH/tmux flow to prove:
+1. Connect to the configured dev server.
+2. Create the remote project directory.
+3. Start a named tmux session in that directory.
+4. Run `codex --yolo` inside that tmux session.
+5. Send the larv trigger into the Codex session.
+6. Capture pane output.
+7. Detect that real larv output is appearing.
+8. Send one human answer into the same tmux session.
+9. Capture output again and prove the same session continued.
+10. Confirm `docs/larv/STATE.yaml` exists in the remote project directory.
+
+The larv trigger should match what the real Codex session accepts.
+Try `/larv:full` first if that is the real slash-style trigger.
+If the actual accepted input is `larv:full`, document that evidence and use it.
+
+Configuration:
+Add or use environment variables like:
+- `LARV_REMOTE_HOST=dev`
+- `LARV_REMOTE_BASE_DIR=/path/where/dtt-ai/creates/projects`
+- `LARV_TMUX_PREFIX=dtt_ai_larv`
+- `LARV_CODEX_COMMAND=codex --yolo`
+- `LARV_TRIGGER=/larv:full`
+
+Do not hardcode server paths or credentials in source code.
+
+Probe routes:
+Keep the probe backend-only and admin-protected.
+
+Suggested routes:
+- `POST /api/larv-runtime-probe/start`
+- `GET /api/larv-runtime-probe/:sessionId/output`
+- `POST /api/larv-runtime-probe/:sessionId/answers`
+- `GET /api/larv-runtime-probe/:sessionId/status`
+- `POST /api/larv-runtime-probe/:sessionId/cancel`
+
+The probe does not need the final frontend UI.
+
+The probe must not fake:
+- larv output
+- prompts
+- answers
+- completion
+- generated artifacts
+
+Prompt detection:
+For this spike, prompt detection can be simple.
+
+Acceptable first version:
+- capture tmux output,
+- show it as raw text,
+- allow the operator/tester to submit an answer manually.
+
+Do not block the spike on perfect prompt parsing.
+
+The critical proof is that DTT-AI can send an answer back into the same persistent Codex/tmux session and larv continues.
+
+Completion detection:
+For this spike, do not overbuild completion detection.
+
+At minimum, prove:
+- tmux session exists,
+- output is captured,
+- `docs/larv/STATE.yaml` exists after larv starts,
+- session can receive answers.
+
+If you can detect final completion reliably from output or generated files, document how.
+
+Hermes integration:
+Do not implement Hermes lifecycle reporting yet.
+
+Only after this SSH/tmux spike proves real session start, output capture, answer submission, and artifact presence should DTT-AI wire Hermes calls around the runtime.
+
+Deliverables:
+1. Exact files changed.
+2. Whether previous Codex app-server spike files were removed or marked research-only.
+3. Exact SSH/tmux commands used under the hood.
+4. Exact environment variables required.
+5. Test results.
+6. Logs/output from one real run.
+7. Evidence that the remote project directory was created.
+8. Evidence that `codex --yolo` started in tmux.
+9. Evidence that `larv:full` was invoked inside Codex.
+10. Evidence that output was captured.
+11. Evidence that an answer can be sent into the same session.
+12. Evidence that `docs/larv/STATE.yaml` exists.
+13. Whether this runtime is ready to be wrapped with Hermes lifecycle reporting.
+
+Hard stop:
+If DTT-AI cannot SSH to the dev server, cannot start tmux, cannot start Codex, or cannot send input back into the same session, stop and report the exact blocker. Do not build Hermes reporting or frontend UI around an unproven runtime.</code></pre>
+</article>
+      <article class="doc" id="15-dtt-ai-ssh-host-resolution" data-source="15-dtt-ai-ssh-host-resolution.md">
+<h1 id="15-dtt-ai-ssh-host-resolution-dtt-ai-ssh-host-resolution-prompt">DTT-AI SSH Host Resolution Prompt</h1>
+<p>Use this prompt inside the DTT-AI project agent.</p>
+<pre><code>You are working inside the DTT-AI project.
+
+The SSH/tmux runtime spike successfully moved DTT-AI in the correct direction:
+- Codex app-server is no longer the active runtime path.
+- The active runtime is now `TmuxSshLarvRuntime`.
+- The backend probe routes are wired to the SSH/tmux runtime.
+- Automated tests prove command construction and route/runtime boundaries.
+
+However, the real runtime is not proven yet because SSH failed before reaching the dev/Contabo server.
+
+Observed blocker:
+
+`ssh: Could not resolve hostname dev: Temporary failure in name resolution`
+
+This means the current DTT-AI backend environment cannot resolve the SSH alias `dev`.
+
+Your next task is to fix or bypass SSH host resolution and then rerun the real SSH/tmux probe.
+
+Do not implement Hermes lifecycle reporting yet.
+Do not build the frontend UI yet.
+Do not fake a successful runtime.
+
+Goal:
+Prove that the DTT-AI backend environment can SSH to the real dev/Contabo server non-interactively and run the real tmux/Codex/larv workflow.
+
+Required checks:
+1. Determine which user the DTT-AI backend runs as in this environment.
+2. Determine whether that user has an SSH config entry for `dev`.
+3. If `dev` is not resolvable, use an explicit SSH target in `LARV_REMOTE_HOST`, such as:
+   - `&lt;user&gt;@&lt;server-ip&gt;`
+   - `&lt;server-ip&gt;` if SSH user is implied by config
+   - a configured host alias that actually resolves from the DTT-AI process user
+4. Confirm non-interactive SSH works:
+</code></pre>
+<p>ssh -o BatchMode=yes -o ConnectTimeout=10 &quot;$LARV_REMOTE_HOST&quot; 'printf connected'</p>
+<pre><code>
+5. Confirm required remote tools:
+</code></pre>
+<p>ssh -o BatchMode=yes -o ConnectTimeout=10 &quot;$LARV_REMOTE_HOST&quot; ' printf &quot;connected\n&quot; command -v tmux command -v codex pwd '</p>
+<pre><code>
+6. Confirm remote write access:
+</code></pre>
+<p>ssh -o BatchMode=yes -o ConnectTimeout=10 &quot;$LARV_REMOTE_HOST&quot; ' mkdir -p &quot;$LARV_REMOTE_BASE_DIR/hermes-runtime-probe&quot; &amp;&amp; test -d &quot;$LARV_REMOTE_BASE_DIR/hermes-runtime-probe&quot; &amp;&amp; printf &quot;workspace-writable\n&quot; '</p>
+<pre><code>
+7. Confirm Codex can start on the remote server from the DTT-AI-controlled command path.
+8. Confirm tmux can create, capture, send keys, and kill a named session.
+
+Use these environment variables:
+</code></pre>
+<p>LARV_REMOTE_HOST=&lt;resolvable ssh target&gt; LARV_REMOTE_BASE_DIR=/tmp/dtt-ai-larv-projects LARV_TMUX_PREFIX=dtt_ai_larv LARV_CODEX_COMMAND='codex --yolo' LARV_TRIGGER='/larv:full'</p>
+<pre><code>
+If `/larv:full` is not the accepted trigger inside Codex, test `larv:full` and document which one works.
+
+After SSH works, rerun the real runtime probe:
+1. Start a project session.
+2. Confirm remote project directory is created.
+3. Confirm tmux session starts.
+4. Confirm `codex --yolo` starts inside tmux.
+5. Send the larv trigger.
+6. Capture real output.
+7. Send one manual answer into the same tmux session.
+8. Capture output again and confirm the same session continued.
+9. Confirm remote artifact exists:
+</code></pre>
+<p>test -f '&lt;remote-project-dir&gt;/docs/larv/STATE.yaml'</p>
+<pre><code>
+Hard stop:
+If SSH cannot connect non-interactively, stop and report the exact missing requirement:
+- DNS/host alias missing
+- SSH key missing
+- SSH user wrong
+- known_hosts prompt blocking
+- remote command unavailable
+- permission denied
+- tmux missing
+- codex missing
+- Codex auth/config missing
+- larv skills missing
+- workspace path not writable
+
+Deliverables:
+1. Exact value used for `LARV_REMOTE_HOST` with secrets redacted.
+2. Whether `ssh dev` works from the DTT-AI backend process user.
+3. Whether direct host/IP SSH works.
+4. Whether non-interactive BatchMode SSH works.
+5. Remote paths for `tmux`, `codex`, and the workspace.
+6. Logs from the real runtime probe.
+7. Evidence that `codex --yolo` started in tmux.
+8. Evidence that larv trigger was sent.
+9. Evidence that output was captured.
+10. Evidence that an answer can be sent into the same tmux session.
+11. Evidence that `docs/larv/STATE.yaml` exists remotely.
+12. Whether the runtime is now ready to be wrapped with Hermes lifecycle reporting.
+
+Do not proceed to Hermes reporting until the real SSH/tmux runtime has been proven end-to-end.</code></pre>
+</article>
+      <article class="doc" id="16-dtt-ai-final-tmux-prompt-answer-proof" data-source="16-dtt-ai-final-tmux-prompt-answer-proof.md">
+<h1 id="16-dtt-ai-final-tmux-prompt-answer-proof-dtt-ai-final-ssh-tmux-prompt-answer-proof-prompt">DTT-AI Final SSH/tmux Prompt-Answer Proof Prompt</h1>
+<p>Use this prompt inside the DTT-AI project agent.</p>
+<pre><code>You are working inside the DTT-AI project.
+
+The SSH/tmux runtime bridge is now the active runtime direction for Scenario A.
+
+Hermes Core does not need API changes right now. It already has the lifecycle endpoints that DTT-AI will report to after the runtime is fully proven.
+
+Current proven runtime facts:
+- The previous Codex app-server path is research-only.
+- The active runtime is SSH/tmux.
+- Same-server SSH works with `LARV_REMOTE_HOST=localhost`.
+- BatchMode SSH works for the `claude-team` process user after authorizing its public key.
+- `tmux` exists remotely at `/usr/bin/tmux`.
+- `codex` exists and reports `codex-cli 0.131.0`.
+- DTT-AI can create the remote project directory.
+- DTT-AI can start `codex --yolo` inside tmux.
+- DTT-AI can capture tmux pane output.
+- DTT-AI can send input into the same tmux session.
+- The accepted trigger is `larv:full`, not `/larv:full`.
+- Real larv pre-flight ran and created `docs/larv/STATE.yaml`.
+
+Current blocker:
+The last fresh rerun was blocked by Codex usage quota:
+
+`You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 2:04 PM.`
+
+This is not a Hermes blocker.
+This is not an SSH blocker.
+This is not a tmux blocker.
+This is not a runtime architecture blocker.
+
+Your next task:
+After Codex quota is available again, run the final SSH/tmux prompt-answer proof.
+
+Do not implement Hermes lifecycle reporting yet.
+Do not build the final frontend UI yet.
+Do not fake prompt-answer behavior.
+
+Use this same-server configuration:
+</code></pre>
+<p>LARV_REMOTE_HOST=localhost LARV_REMOTE_BASE_DIR=/tmp/dtt-ai-larv-projects LARV_TMUX_PREFIX=dtt_ai_larv LARV_CODEX_COMMAND='codex --yolo' LARV_TRIGGER='larv:full' LARV_SSH_TIMEOUT_MS=60000 LARV_CODEX_READY_TIMEOUT_MS=70000 LARV_CODEX_READY_POLL_INTERVAL_MS=2000 LARV_TMUX_CAPTURE_LINES=900</p>
+<pre><code>
+Final proof requirements:
+1. Start a fresh runtime probe session.
+2. Confirm the remote project directory is created.
+3. Confirm tmux session is created.
+4. Confirm `codex --yolo` starts inside tmux.
+5. Send `larv:full` into the Codex session.
+6. Capture real larv output.
+7. Let larv reach an actual question or input point.
+8. Submit one answer through:
+   `POST /api/larv-runtime-probe/:sessionId/answers`
+9. Capture output again after the answer.
+10. Prove the same tmux session continued after the answer.
+11. Confirm `docs/larv/STATE.yaml` exists remotely.
+12. If possible, confirm `STATE.yaml` or later larv artifacts advanced after the answer.
+
+Important:
+Do not manually type into tmux outside DTT-AI for the answer proof. The answer must go through the DTT-AI backend answer endpoint so we prove the actual product path.
+
+If larv asks multiple questions:
+- answer only enough to prove that DTT-AI can resume the same session,
+- do not spend quota trying to complete the entire greenfield workflow unless it is cheap and already flowing.
+
+If Codex quota blocks again:
+- stop,
+- report the quota message,
+- do not mark the proof complete.
+
+If Codex asks for directory trust:
+- use the existing runtime handling for that prompt,
+- document the captured output.
+
+If `larv:full` does not reach a clear prompt:
+- report the exact captured output,
+- report whether `STATE.yaml` was created,
+- report whether the session is still alive,
+- do not invent a prompt.
+
+Deliverables:
+1. Exact files changed, if any.
+2. Test results.
+3. Runtime probe command or API calls used.
+4. Session ID.
+5. tmux session name.
+6. Remote project directory.
+7. Captured output before answer.
+8. The prompt or input point that required a human answer.
+9. The answer submitted through the DTT-AI backend endpoint.
+10. Captured output after answer.
+11. Evidence the same tmux session continued.
+12. Evidence `docs/larv/STATE.yaml` exists.
+13. Whether the runtime is now ready for Hermes lifecycle reporting.
+
+Success criteria:
+The runtime is ready for Hermes wrapping only if this is proven:
+
+`real larv output/question -&gt; DTT-AI backend answer endpoint -&gt; same tmux/Codex session continues`
+
+If that is proven, the next phase is:
+wrap the SSH/tmux runtime with Hermes lifecycle reporting.</code></pre>
+</article>
+      <article class="doc" id="17-dtt-ai-hermes-lifecycle-wrapping" data-source="17-dtt-ai-hermes-lifecycle-wrapping.md">
+<h1 id="17-dtt-ai-hermes-lifecycle-wrapping-dtt-ai-hermes-lifecycle-wrapping-prompt">DTT-AI Hermes Lifecycle Wrapping Prompt</h1>
+<p>Use this prompt inside the DTT-AI project agent.</p>
+<pre><code>You are working inside the DTT-AI project.
+
+The SSH/tmux runtime bridge is now proven for Scenario A.
+
+Proven runtime boundary:
+
+`real larv output/question -&gt; DTT-AI backend answer endpoint -&gt; same tmux/Codex session continues`
+
+Do not revisit Codex app-server for this phase.
+Do not rebuild the runtime from scratch.
+Do not build the final frontend UI yet.
+Do not fake Hermes events.
+
+Your task:
+Wrap the proven `TmuxSshLarvRuntime` with Hermes Core lifecycle reporting.
+
+Hermes Core is ready and already exposes the required API:
+- `POST /workflows/new-project/larv-skill/session-started`
+- `POST /workflows/new-project/larv-skill/{session_id}/output`
+- `POST /workflows/new-project/larv-skill/{session_id}/prompt-shown`
+- `POST /workflows/new-project/larv-skill/{session_id}/human-answer`
+- `POST /workflows/new-project/larv-skill/{session_id}/completed`
+- `POST /workflows/new-project/larv-skill/{session_id}/failed`
+- `GET /workflows/new-project/larv-skill/{session_id}/status`
+
+Hermes Core docs to reference:
+- `docs/hermes/11-dtt-ai-handoff.md`
+- `docs/hermes/10-dtt-ai-larv-skill-contract.md`
+
+Runtime facts to preserve:
+- `LARV_REMOTE_HOST=localhost` works for same-server testing.
+- `LARV_TRIGGER='larv:full'` is correct.
+- `/larv:full` is not accepted in this Codex TUI.
+- `codex --yolo` runs inside tmux.
+- DTT-AI can send answers into the same tmux session.
+
+Add DTT-AI config:
+- `HERMES_URL`
+- `HERMES_DTT_AI_SHARED_TOKEN`
+- optional `HERMES_ENABLED`
+
+Recommended files:
+- `apps/ai-service/src/services/hermes/hermesClient.ts`
+- `apps/ai-service/src/services/hermes/hermesClient.test.ts`
+- `apps/ai-service/src/services/larvRuntime/hermesReportingLarvRuntime.ts`
+- `apps/ai-service/src/services/larvRuntime/hermesReportingLarvRuntime.test.ts`
+- update `apps/ai-service/src/routes/larvRuntimeProbe.ts`
+- update shared validation/env schemas if the repo has a standard place for them
+
+Hermes client responsibilities:
+1. Send `X-Hermes-Token` when configured.
+2. Generate stable `event_id` values.
+3. Implement typed methods:
+   - `startSession`
+   - `recordOutput`
+   - `recordPromptShown`
+   - `recordHumanAnswer`
+   - `completeSession`
+   - `failSession`
+   - `getStatus`
+4. Preserve Hermes structured errors:
+   - `detail.code`
+   - `detail.message`
+   - `detail.path`
+5. Log enough context for operator debugging.
+
+Event ID rules:
+Use stable IDs based on the DTT-AI runtime session ID:
+- `&lt;dtt-session-id&gt;-started`
+- `&lt;dtt-session-id&gt;-output-000001`
+- `&lt;dtt-session-id&gt;-prompt-&lt;prompt-id&gt;`
+- `&lt;dtt-session-id&gt;-answer-&lt;prompt-id&gt;`
+- `&lt;dtt-session-id&gt;-completed`
+- `&lt;dtt-session-id&gt;-failed`
+
+Do not generate a new event ID when retrying the same event.
+
+Wrapper behavior:
+
+1. On runtime start:
+   - start the real SSH/tmux runtime first,
+   - then call Hermes `session-started`,
+   - store Hermes `interactive_session.id` alongside the DTT-AI runtime session.
+
+2. On output capture:
+   - detect only newly captured output chunks,
+   - increment sequence numbers,
+   - call Hermes `output`.
+
+3. On prompt detection/manual prompt registration:
+   - call Hermes `prompt-shown`,
+   - include `prompt_id`, prompt text, choices/default when known, and metadata.
+
+4. On answer submission:
+   - send answer to the real tmux/Codex session first,
+   - only after that succeeds, call Hermes `human-answer`.
+
+5. On cancel or runtime failure:
+   - call Hermes `failed` with a useful reason.
+
+6. On completion:
+   - verify the remote project directory/artifact path is readable by Hermes Core under the current same-server assumption,
+   - call Hermes `completed`.
+
+Important ordering rule:
+Hermes should reflect real runtime actions. Do not report success to Hermes before the real runtime action succeeds.
+
+For example:
+`send answer into tmux -&gt; then report human-answer to Hermes`
+
+Do not call Hermes `completed` unless real artifacts exist.
+
+Status:
+Expose a route or extend the existing probe status so DTT-AI can show:
+- local runtime status,
+- tmux session name,
+- remote project directory,
+- Hermes session ID,
+- Hermes run state from `GET /status`,
+- latest Hermes candidate info when available.
+
+Testing:
+Add unit tests with mocked Hermes HTTP calls proving:
+1. `session-started` is called after runtime start.
+2. output chunks are sent with stable sequence/event IDs.
+3. prompt-shown is sent for detected/manual prompts.
+4. answer is sent to runtime before Hermes `human-answer`.
+5. runtime failure/cancel calls Hermes `failed`.
+6. completion calls Hermes `completed` only when artifact path is present.
+7. Hermes structured errors are preserved/logged.
+
+Do not require a real Codex quota-consuming run for unit tests. Use mocks for Hermes client and runtime in tests.
+
+Manual verification:
+After unit tests pass, run a short real probe only if Codex quota is available:
+1. Start Hermes Core.
+2. Run Hermes environment validation.
+3. Start DTT-AI runtime probe.
+4. Confirm Hermes receives `session-started`.
+5. Capture output and confirm Hermes receives `output`.
+6. Submit one answer and confirm Hermes receives `human-answer`.
+7. If completion is not reached cheaply, do not force a full larv run just for this phase.
+
+Deliverables:
+1. Exact files changed.
+2. Test results.
+3. Whether Hermes reporting is behind `HERMES_ENABLED`.
+4. Example environment variables.
+5. Sample Hermes request logs or mocked request evidence.
+6. Whether the backend is ready for SSE/frontend New Project page.
+
+Success criteria:
+The proven SSH/tmux runtime emits truthful Hermes lifecycle events without changing the runtime behavior.</code></pre>
+</article>
+      <article class="doc" id="18-dtt-ai-new-project-page" data-source="18-dtt-ai-new-project-page.md">
+<h1 id="18-dtt-ai-new-project-page-dtt-ai-new-project-page-prompt">DTT-AI New Project Page Prompt</h1>
+<p>Use this prompt inside the DTT-AI project agent.</p>
+<pre><code>You are working inside the DTT-AI project.
+
+The DTT-AI backend now has:
+- a proven SSH/tmux runtime for `codex --yolo -&gt; larv:full`,
+- backend answer submission into the same tmux/Codex session,
+- Hermes lifecycle reporting through `HermesReportingLarvRuntime`,
+- opt-in Hermes reporting via `HERMES_ENABLED=true`.
+
+Your next task is to add the frontend/operator workflow for Scenario A.
+
+Build a separate “New Project” tab/page.
+
+Do not modify or replace the existing chat flow.
+Do not force the larv workflow into the support-ticket chat UI.
+Do not build a fake demo.
+Use the existing backend runtime/probe routes that talk to the real SSH/tmux runtime.
+
+Goal:
+Prove the DTT-AI operator loop in the actual website:
+
+`create project -&gt; see real larv output -&gt; answer prompt -&gt; see same session continue -&gt; inspect status`
+
+Recommended UI shape:
+- Add sidebar item: `New Project`
+- Add route/page: `/new-project`
+- Page components:
+  - project name input
+  - start button
+  - runtime status card
+  - terminal-style output panel
+  - prompt/answer panel
+  - cancel button
+  - Hermes status panel when Hermes reporting is enabled
+
+Backend routes already available from the runtime probe:
+- `POST /api/larv-runtime-probe/start`
+- `GET /api/larv-runtime-probe/:sessionId/output`
+- `POST /api/larv-runtime-probe/:sessionId/answers`
+- `GET /api/larv-runtime-probe/:sessionId/status`
+- `POST /api/larv-runtime-probe/:sessionId/cancel`
+
+If route names changed during backend work, inspect the actual DTT-AI backend routes and use the real names.
+
+Implementation guidance:
+1. Add the new route/page without disturbing existing chat.
+2. Add a sidebar/nav entry for `New Project`.
+3. Use the existing app layout/styles/components where possible.
+4. Keep the first version operational and clear, not overdesigned.
+5. Poll backend status/output first unless SSE already exists cleanly in the repo.
+6. If you add SSE, keep it small and testable; do not block the page on SSE.
+7. Preserve admin/auth behavior already applied to the backend probe routes.
+
+Frontend behavior:
+1. User enters project name.
+2. User clicks Start.
+3. Frontend calls backend start route.
+4. Store returned DTT-AI session ID.
+5. Poll output/status for that session.
+6. Show terminal output in chronological order.
+7. When a prompt/input point is available, show answer input.
+8. User submits answer.
+9. Frontend calls answer route.
+10. Continue polling and show new output.
+11. User can cancel the session.
+12. If Hermes status is available, show Hermes run state and Hermes session ID.
+
+Prompt handling:
+For this first UI pass, do not overbuild prompt parsing.
+
+Acceptable:
+- show latest captured output,
+- provide a manual answer box when session is running or waiting,
+- let the user submit an answer with a prompt ID.
+
+Better if already available:
+- use backend-detected prompt records.
+
+Do not fake a prompt.
+
+Suggested prompt ID fallback:
+If backend does not provide a structured prompt ID yet, generate a stable UI prompt ID like:
+
+`manual-prompt-&lt;sessionId&gt;-&lt;counter&gt;`
+
+Testing:
+Add frontend tests for:
+1. page renders project form,
+2. start button calls backend start route,
+3. output/status polling renders terminal output,
+4. answer submit calls backend answer route,
+5. cancel calls backend cancel route,
+6. existing chat route/page still works or is not modified.
+
+Add backend route/client tests only if the page needs a new frontend API wrapper.
+
+Manual verification:
+1. Start Hermes Core if testing Hermes reporting:
+</code></pre>
+<p>PYTHONPATH=src HERMES_DTT_AI_SHARED_TOKEN=&lt;shared-token&gt; uvicorn hermes_core.app:app --host 0.0.0.0 --port 8000</p>
+<pre><code>
+2. Start DTT-AI with:
+</code></pre>
+<p>HERMES_ENABLED=true HERMES_URL=http://127.0.0.1:8000 HERMES_DTT_AI_SHARED_TOKEN=&lt;shared-token&gt; LARV_REMOTE_HOST=localhost LARV_REMOTE_BASE_DIR=/tmp/dtt-ai-larv-projects LARV_TMUX_PREFIX=dtt_ai_larv LARV_CODEX_COMMAND='codex --yolo' LARV_TRIGGER='larv:full'</p>
+<pre><code>
+3. Open the DTT-AI website.
+4. Navigate to `New Project`.
+5. Start a project.
+6. Confirm real output appears.
+7. Submit one answer through the UI.
+8. Confirm output continues in the same session.
+9. Confirm Hermes status is visible when enabled.
+
+Deliverables:
+1. Exact files changed.
+2. Route/page path added.
+3. Sidebar/nav change.
+4. Tests run and results.
+5. Screenshots or textual UI verification.
+6. Whether polling or SSE was used.
+7. Whether Hermes status displays.
+8. Any remaining UX/runtime blockers.
+
+Success criteria:
+The existing chat remains undisturbed, and the new `New Project` page can drive the proven backend SSH/tmux larv runtime from the browser.</code></pre>
+</article>
+      <article class="doc" id="19-dtt-ai-new-project-proxy-fix" data-source="19-dtt-ai-new-project-proxy-fix.md">
+<h1 id="19-dtt-ai-new-project-proxy-fix-dtt-ai-new-project-proxy-fix-prompt">DTT-AI New Project Proxy Fix Prompt</h1>
+<p>Use this prompt inside the DTT-AI project agent.</p>
+<pre><code>You are working inside the DTT-AI project.
+
+The New Project page exists, but browser runtime testing is blocked by a frontend/backend proxy mismatch.
+
+This is not a Hermes Core blocker.
+This is not an SSH/tmux runtime blocker.
+This is not a larv blocker.
+
+Observed browser URL:
+
+`http://31.220.79.31:5174/new-project`
+
+Observed UI behavior:
+1. Login works with the temporary admin app user.
+2. User enters a project name.
+3. User clicks Start.
+4. UI shows:
+
+`Request failed: 404`
+
+Direct backend reproduction:
+</code></pre>
+<p>curl -X POST http://127.0.0.1:3001/api/larv-runtime-probe/start \ -H 'Content-Type: application/json' \ --data '{&quot;projectName&quot;:&quot;DocsCheck&quot;,&quot;workspaceDir&quot;:&quot;/tmp/dtt-ai-larv-projects/docs-check&quot;}'</p>
+<pre><code>
+Response:
+</code></pre>
+<p>{ &quot;statusCode&quot;: 404, &quot;path&quot;: &quot;/api/larv-runtime-probe/start&quot;, &quot;errors&quot;: { &quot;message&quot;: &quot;Cannot POST /api/larv-runtime-probe/start&quot;, &quot;name&quot;: &quot;NotFoundException&quot; } }</p>
+<pre><code>
+Root cause:
+Port `3001` is currently serving a different Node/Nest service, not the isolated DTT-AI `apps/ai-service` process that contains the larv runtime probe route.
+
+The Vite frontend proxy sends `/api/...` calls to `http://localhost:3001`, so the New Project page is reaching the wrong backend.
+
+Your task:
+Fix the dev-server wiring so the New Project page calls the correct isolated DTT-AI `apps/ai-service` backend.
+
+Do not modify Hermes Core.
+Do not change the SSH/tmux runtime logic unless route wiring proves it is actually wrong.
+Do not continue runtime UI validation until the route reaches the correct backend.
+
+Valid fix options:
+
+Option A:
+Start the correct isolated `apps/ai-service` on port `3001`, if that port can be freed safely.
+
+Option B:
+Start the correct isolated `apps/ai-service` on another port and update the frontend Vite proxy target to that port.
+
+Choose the safer option for this worktree. Do not kill unrelated production services unless explicitly approved.
+
+Required checks:
+1. Identify which process is currently listening on `3001`.
+2. Identify which port the isolated worktree `apps/ai-service` should use.
+3. Confirm the isolated `apps/ai-service` process has the larv runtime probe route mounted:
+
+`POST /api/larv-runtime-probe/start`
+
+4. Confirm direct curl reaches the correct backend and no longer returns the Nest `Cannot POST` 404.
+
+Example direct check:
+</code></pre>
+<p>curl -X POST http://127.0.0.1:&lt;correct-ai-service-port&gt;/api/larv-runtime-probe/start \ -H 'Content-Type: application/json' \ --data '{&quot;projectName&quot;:&quot;DocsCheck&quot;,&quot;workspaceDir&quot;:&quot;/tmp/dtt-ai-larv-projects/docs-check&quot;}'</p>
+<pre><code>
+It is acceptable if this starts a real runtime session, but be mindful of Codex quota. If needed, add or use a health/test route to prove routing without consuming quota. Do not fake success for the actual start route.
+
+5. Confirm the frontend dev server proxies `/api/larv-runtime-probe/start` to the same correct backend port.
+6. Confirm the browser New Project Start button no longer returns the Nest 404.
+
+Runtime environment for the correct DTT-AI backend:
+</code></pre>
+<p>LARV_REMOTE_HOST=localhost LARV_REMOTE_BASE_DIR=/tmp/dtt-ai-larv-projects LARV_TMUX_PREFIX=dtt_ai_larv LARV_CODEX_COMMAND='codex --yolo' LARV_TRIGGER='larv:full' LARV_SSH_TIMEOUT_MS=60000 LARV_CODEX_READY_TIMEOUT_MS=70000 LARV_CODEX_READY_POLL_INTERVAL_MS=2000 LARV_TMUX_CAPTURE_LINES=900</p>
+<pre><code>
+If Hermes reporting is enabled:
+</code></pre>
+<p>HERMES_ENABLED=true HERMES_URL=http://127.0.0.1:8000 HERMES_DTT_AI_SHARED_TOKEN=&lt;shared-token&gt;</p>
+<pre><code>
+Frontend dev server note:
+When using a laptop/external browser, do not use `127.0.0.1` as the browser URL. Use:
+
+`http://31.220.79.31:5174/new-project`
+
+But server-side proxy targets can still use `localhost` because they run on the server.
+
+Deliverables:
+1. Which process was on port `3001`.
+2. Which option you chose: use port `3001` or change proxy target.
+3. Exact files changed.
+4. Exact commands used to start the correct backend and frontend.
+5. Curl result proving the correct backend route is reachable.
+6. Browser result proving the New Project Start button no longer hits the wrong Nest backend.
+7. Whether any real Codex/tmux session was started during verification.
+8. Any tmux sessions created and whether they were cleaned up.
+
+Success criteria:
+The New Project page’s `/api/larv-runtime-probe/start` request reaches the isolated DTT-AI `apps/ai-service` backend that owns the SSH/tmux runtime route.</code></pre>
+</article>
+      <article class="doc" id="20-dtt-ai-runtime-test-report-capture" data-source="20-dtt-ai-runtime-test-report-capture.md">
+<h1 id="20-dtt-ai-runtime-test-report-capture-dtt-ai-runtime-test-report-capture-prompt">DTT-AI Runtime Test Report Capture Prompt</h1>
+<p>Use this prompt inside the DTT-AI project agent before running the browser-driven New Project test.</p>
+<pre><code>You are working inside the DTT-AI project.
+
+Before the operator runs the real browser-driven New Project runtime test, add a lightweight test report capture mechanism.
+
+Purpose:
+Capture evidence from the actual browser/runtime/Hermes test while the session details are fresh.
+
+Do not change the runtime architecture.
+Do not fake report data.
+Do not consume Codex quota just to test the report writer.
+
+Recommended report directory:
+
+`docs/runtime-test-reports/`
+
+Recommended filename format:
+
+`YYYY-MM-DD-new-project-browser-test-&lt;sessionId&gt;.md`
+
+If no session ID is available yet, start with:
+
+`YYYY-MM-DD-new-project-browser-test.md`
+
+Report should capture:
+1. Test date/time.
+2. Browser URL used.
+3. Logged-in app user, without password.
+4. Whether Hermes was enabled.
+5. Hermes URL, with secrets redacted.
+6. Runtime environment:
+   - `LARV_REMOTE_HOST`
+   - `LARV_REMOTE_BASE_DIR`
+   - `LARV_TMUX_PREFIX`
+   - `LARV_CODEX_COMMAND`
+   - `LARV_TRIGGER`
+7. Project name.
+8. DTT-AI runtime session ID.
+9. tmux session name.
+10. Remote project directory.
+11. Hermes session ID if available.
+12. Start response summary.
+13. Captured output before first answer.
+14. Prompt/question shown to the user.
+15. Prompt ID used.
+16. Human answer submitted.
+17. Captured output after answer.
+18. Whether the same tmux/Codex session continued.
+19. Artifact evidence:
+   - whether `docs/larv/STATE.yaml` exists,
+   - any other generated files seen.
+20. Hermes status/events if Hermes was enabled:
+   - run state,
+   - interactive session status,
+   - latest event types,
+   - project context candidate if created.
+21. Errors encountered.
+22. Cancel/cleanup result.
+23. Final verdict:
+   - PASS
+   - PARTIAL
+   - FAIL
+24. Next recommended action.
+
+Implementation options:
+
+Option A: Manual report template only
+- Add a Markdown template under `docs/runtime-test-reports/TEMPLATE-new-project-browser-test.md`.
+- The operator or agent fills it after testing.
+- This is acceptable if it is fastest.
+
+Option B: Backend-assisted report endpoint
+- Add an admin-only backend route that writes a report from current session status.
+- Example:
+  - `POST /api/larv-runtime-probe/:sessionId/report`
+- It should collect:
+  - local runtime status,
+  - captured output,
+  - Hermes status if available,
+  - artifact check result.
+- It can still allow operator notes in the request body.
+
+Recommendation:
+Use Option A unless the DTT-AI code already has a simple docs-writing/reporting pattern. Do not overbuild this before the first browser test.
+
+Add this template:
+</code></pre>
+<h1 id="20-dtt-ai-runtime-test-report-capture-new-project-browser-runtime-test-report">New Project Browser Runtime Test Report</h1>
+<p>Date: Verdict: PASS | PARTIAL | FAIL</p>
+<h2 id="20-dtt-ai-runtime-test-report-capture-test-setup">Test Setup</h2>
+<ul>
+<li>Browser URL:</li>
+<li>App user:</li>
+<li>Hermes enabled:</li>
+<li>Hermes URL:</li>
+<li>Project name:</li>
+</ul>
+<h2 id="20-dtt-ai-runtime-test-report-capture-runtime-environment">Runtime Environment</h2>
+<pre><code>LARV_REMOTE_HOST=
+LARV_REMOTE_BASE_DIR=
+LARV_TMUX_PREFIX=
+LARV_CODEX_COMMAND=
+LARV_TRIGGER=</code></pre>
+<h2 id="20-dtt-ai-runtime-test-report-capture-session-ids">Session IDs</h2>
+<ul>
+<li>DTT-AI session ID:</li>
+<li>tmux session name:</li>
+<li>Remote project directory:</li>
+<li>Hermes session ID:</li>
+</ul>
+<h2 id="20-dtt-ai-runtime-test-report-capture-start-result">Start Result</h2>
+<pre><code></code></pre>
+<h2 id="20-dtt-ai-runtime-test-report-capture-output-before-answer">Output Before Answer</h2>
+<pre><code></code></pre>
+<h2 id="20-dtt-ai-runtime-test-report-capture-prompt-question">Prompt / Question</h2>
+<ul>
+<li>Prompt ID:</li>
+<li>Prompt text:</li>
+</ul>
+<h2 id="20-dtt-ai-runtime-test-report-capture-answer-submitted">Answer Submitted</h2>
+<pre><code></code></pre>
+<h2 id="20-dtt-ai-runtime-test-report-capture-output-after-answer">Output After Answer</h2>
+<pre><code></code></pre>
+<h2 id="20-dtt-ai-runtime-test-report-capture-continuation-evidence">Continuation Evidence</h2>
+<ul>
+<li>Did the same tmux/Codex session continue:</li>
+<li>Evidence:</li>
+</ul>
+<h2 id="20-dtt-ai-runtime-test-report-capture-artifact-evidence">Artifact Evidence</h2>
+<ul>
+<li><code>docs/larv/STATE.yaml</code> exists:</li>
+<li>Other files:</li>
+</ul>
+<h2 id="20-dtt-ai-runtime-test-report-capture-hermes-evidence">Hermes Evidence</h2>
+<ul>
+<li>Hermes run state:</li>
+<li>Hermes interactive session status:</li>
+<li>Latest event types:</li>
+<li>ProjectContextCandidate:</li>
+</ul>
+<h2 id="20-dtt-ai-runtime-test-report-capture-errors">Errors</h2>
+<pre><code></code></pre>
+<h2 id="20-dtt-ai-runtime-test-report-capture-cleanup">Cleanup</h2>
+<ul>
+<li>Cancel endpoint called:</li>
+<li>tmux session still active:</li>
+<li>Cleanup notes:</li>
+</ul>
+<h2 id="20-dtt-ai-runtime-test-report-capture-next-action">Next Action</h2>
+<pre><code>
+Testing:
+- No Codex run is required to test the template.
+- If you add a backend report endpoint, test it with mocked runtime/Hermes status.
+
+Deliverables:
+1. Exact files changed.
+2. Whether you implemented Option A or Option B.
+3. Where the report/template lives.
+4. Any instructions for the operator before running the browser test.</code></pre>
+</article>
+      <article class="doc" id="21-scenario-a-checkpoint" data-source="21-scenario-a-checkpoint.md">
+<h1 id="21-scenario-a-checkpoint-scenario-a-checkpoint">Scenario A Checkpoint</h1>
+<p>Date: 2026-05-26</p>
+<h2 id="21-scenario-a-checkpoint-verdict">Verdict</h2>
+<p>Scenario A core runtime loop is proven.</p>
+<pre><code>New Project page -&gt; SSH/tmux Codex session -&gt; larv:full -&gt; real larv question -&gt; DTT-AI answer UI -&gt; same session continues -&gt; generated website/sandbox output</code></pre>
+<h2 id="21-scenario-a-checkpoint-what-was-proven">What Was Proven</h2>
+<pre><code>DTT-AI can run the New Project flow from the browser.
+DTT-AI can start a real SSH/tmux runtime session.
+DTT-AI can run codex --yolo in the project directory.
+DTT-AI can invoke larv:full with the accepted trigger: larv:full.
+DTT-AI can display real larv output.
+DTT-AI can accept a human answer through the browser UI.
+DTT-AI can send the answer back through the backend answer endpoint.
+The same tmux/Codex session continues after the answer.
+larv creates docs/larv/STATE.yaml.
+The workflow produced website/sandbox output.
+Hermes lifecycle reporting exists behind HERMES_ENABLED=true.</code></pre>
+<h2 id="21-scenario-a-checkpoint-important-runtime-facts">Important Runtime Facts</h2>
+<pre><code>LARV_REMOTE_HOST=localhost works for same-server testing.
+LARV_TRIGGER='larv:full' is correct.
+/larv:full is not accepted by the current Codex TUI.
+The SSH/tmux runtime is the active path.
+Codex app-server is research-only for this scenario.</code></pre>
+<h2 id="21-scenario-a-checkpoint-deferred-productization">Deferred Productization</h2>
+<p>These are important, but no longer block the core Scenario A proof:</p>
+<pre><code>durable New Project session persistence
+project cards
+reconnect/resume after browser close or backend restart
+better larv question display
+chat/output filtering polish
+loading states
+runtime details panel refinements
+final operator documentation
+full completion-to-Hermes ProjectContextCandidate smoke with Hermes enabled</code></pre>
+<h2 id="21-scenario-a-checkpoint-strategic-conclusion">Strategic Conclusion</h2>
+<p>The next highest-value proof is Scenario B: issue fixing.</p>
+<p>Scenario A should remain available for follow-up productization, but continuing UI polish now would not reduce the largest remaining product risk.</p>
 </article>
     </main>
   </div>

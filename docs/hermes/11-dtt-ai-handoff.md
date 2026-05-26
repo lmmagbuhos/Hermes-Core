@@ -10,6 +10,101 @@ Hermes Core owns durable workflow state, transcript storage, prompt and answer a
 
 Hermes Core does not call `larv:full` directly.
 
+## Current Runtime Direction
+
+The preferred DTT-AI runtime bridge for Scenario A is now an SSH/tmux-backed Codex terminal session.
+
+It should mirror the real manual workflow:
+
+```text
+ssh dev
+mkdir <project-name>
+cd <project-name>
+codex --yolo
+invoke larv:full inside the Codex session
+answer larv prompts inside the same session
+```
+
+DTT-AI should automate that workflow from the backend:
+
+```text
+1. SSH to the dev/Contabo server.
+2. Create the project workspace directory.
+3. Start a persistent tmux session in that directory.
+4. Run codex --yolo inside tmux.
+5. Send the larv:full trigger into that Codex session.
+6. Capture tmux output for the browser.
+7. Send human answers back into the same tmux session.
+8. Report lifecycle events to Hermes Core.
+```
+
+Codex app-server was investigated as a runtime candidate, but it hit `request_user_input is unavailable in Default mode`. Keep that work as research only unless SSH/tmux fails.
+
+Current DTT-AI spike evidence:
+
+```text
+LARV_REMOTE_HOST=localhost works for same-server SSH.
+BatchMode SSH works for the claude-team process user after authorizing its public key.
+tmux is available at /usr/bin/tmux.
+codex is available and reports codex-cli 0.131.0.
+codex --yolo starts inside tmux.
+The accepted larv trigger in this Codex TUI is larv:full, not /larv:full.
+larv pre-flight created docs/larv/STATE.yaml in the remote project directory.
+```
+
+Use this environment for same-server testing:
+
+```bash
+LARV_REMOTE_HOST=localhost
+LARV_REMOTE_BASE_DIR=/tmp/dtt-ai-larv-projects
+LARV_TMUX_PREFIX=dtt_ai_larv
+LARV_CODEX_COMMAND='codex --yolo'
+LARV_TRIGGER='larv:full'
+```
+
+Final runtime proof status:
+
+```text
+real larv question -> human answer submitted through DTT-AI backend answer endpoint -> same tmux/Codex session continues
+```
+
+This is now proven.
+
+Successful proof details:
+
+```text
+LARV_REMOTE_HOST=localhost
+LARV_TRIGGER='larv:full'
+DTT-AI answer endpoint: POST /api/larv-runtime-probe/:sessionId/answers
+remote artifact: docs/larv/STATE.yaml
+```
+
+The final proof showed:
+
+```text
+larv asked: "Who knows this domain best..."
+DTT-AI submitted an answer through the backend endpoint.
+The same tmux/Codex session continued and asked the next larv question.
+```
+
+The SSH/tmux runtime is ready to be wrapped with Hermes lifecycle reporting.
+
+Backend Hermes wrapping status:
+
+```text
+DTT-AI implemented HermesReportingLarvRuntime around TmuxSshLarvRuntime.
+Hermes reporting is opt-in with HERMES_ENABLED=true.
+The wrapper reports session-started, output, prompt-shown, human-answer, failed, completed, and status.
+Runtime behavior remains unchanged.
+Unit tests and ai-service build pass.
+```
+
+Current next DTT-AI phase:
+
+```text
+Add a separate New Project tab/page that uses the proven backend runtime and Hermes wrapper without disturbing the existing chat flow.
+```
+
 ## Environment
 
 Hermes Core:

@@ -13,6 +13,13 @@ artifacts, and creates ProjectContextCandidate.
 
 ## Workflow
 
+Core runtime status:
+
+```text
+The browser-to-runtime loop is proven:
+DTT-AI New Project page -> SSH/tmux -> codex --yolo -> larv:full -> human answer through DTT-AI -> same session continues.
+```
+
 ```text
 1. Request received
 2. Hermes-Triage normalization

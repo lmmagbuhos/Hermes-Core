@@ -4,6 +4,8 @@ The first proof must execute real workflows. It must not be a fake MVP, simulate
 
 ## POC A: New Project Creation
 
+Status: **Core runtime loop proven on 2026-05-26.**
+
 Goal:
 
 ```text
@@ -30,6 +32,31 @@ Required behavior:
 13. Permanent Hermes-{projectName} is created after validation.
 14. Learning candidates are created.
 15. Completion report is produced.
+```
+
+Proven so far:
+
+```text
+DTT-AI New Project page starts a real SSH/tmux Codex session.
+Codex runs in YOLO mode inside the remote project directory.
+DTT-AI invokes larv:full as the accepted plain-text Codex skill trigger.
+DTT-AI displays real larv output in the browser.
+larv asks a real workflow question.
+The human answers through the DTT-AI browser UI.
+DTT-AI sends the answer through the backend answer endpoint.
+The same tmux/Codex session continues after the answer.
+larv creates docs/larv/STATE.yaml and produces website/sandbox output.
+Hermes lifecycle reporting is wrapped around the proven runtime path behind HERMES_ENABLED=true.
+```
+
+Remaining POC A productization:
+
+```text
+durable New Project session persistence
+project cards and reconnect/resume behavior
+operator UX polish for question display, output filtering, loading states, and runtime details
+final operator documentation
+full completion-to-ProjectContextCandidate smoke with Hermes enabled when quota allows
 ```
 
 This proves:
